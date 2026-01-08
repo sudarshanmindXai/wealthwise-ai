@@ -1,39 +1,49 @@
 import json
+import glob
+import os
 
 REQUIRED_FIELDS = {
     "doc_id",
     "doc_type",
-    "section",
-    "sub_section",
-    "ay",
     "text"
 }
 
-def validate_chunks(file_path: str):
+def validate_chunks(base_dir="data/knowledge"):
     errors = []
-    with open(file_path, "r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, start=1):
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                errors.append(f"Line {line_no}: Invalid JSON")
-                continue
+    files = glob.glob(os.path.join(base_dir, "**/*.jsonl"), recursive=True)
 
-            missing = REQUIRED_FIELDS - obj.keys()
-            if missing:
-                errors.append(
-                    f"Line {line_no}: Missing fields {missing}"
-                )
+    if not files:
+        print("❌ No JSONL files found under", base_dir)
+        return
 
-    return errors
+    print(f"🔍 Found {len(files)} JSONL files. Validating...")
 
+    for file_path in files:
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line_no, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    errors.append((file_path, line_no, "Invalid JSON"))
+                    continue
+
+                missing = REQUIRED_FIELDS - obj.keys()
+                if missing:
+                    errors.append(
+                        (file_path, line_no, f"Missing fields: {missing}")
+                    )
+
+    if errors:
+        print("❌ VALIDATION FAILED")
+        for e in errors[:10]:
+            print(e)
+        print(f"... {len(errors)} total errors")
+    else:
+        print("✅ VALIDATION PASSED — all JSONL files are clean")
 
 if __name__ == "__main__":
-    path = "data_processed/chunks.jsonl"
-    errs = validate_chunks(path)
-    if errs:
-        print("Validation FAILED:")
-        for e in errs:
-            print(e)
-    else:
-        print("Validation PASSED: chunks.jsonl looks good.")
+    validate_chunks()

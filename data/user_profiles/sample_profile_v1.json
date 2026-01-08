@@ -1,0 +1,67 @@
+{
+  "profile_version": "v1",
+  "assessment_year": "2025-26",
+  "taxpayer": {
+    "residential_status": "resident",
+    "age_category": "below_60",
+    "is_huf": false
+  },
+  "income": {
+    "salary": {
+      "gross_salary": 0,
+      "standard_deduction_claim": true,
+      "exempt_allowances": 0
+    },
+    "house_property": {
+      "count_properties": 0,
+      "self_occupied_interest": 0,
+      "let_out_net_income": 0
+    },
+    "capital_gains": {
+      "has_capital_gains": false,
+      "stcg_111a": 0,
+      "stcg_other": 0,
+      "ltcg_112a": 0,
+      "ltcg_other": 0
+    },
+    "other_sources": {
+      "savings_interest": 0,
+      "fd_interest": 0,
+      "dividends": 0,
+      "family_pension": 0,
+      "other_taxable_income": 0
+    },
+    "business_profession": {
+      "has_business_income": false,
+      "presumptive": {
+        "opted": false,
+        "section": null,
+        "gross_receipts_or_turnover": 0,
+        "presumptive_income": 0
+      },
+      "non_presumptive": {
+        "net_profit": 0
+      }
+    }
+  },
+  "deductions_old_regime": {
+    "80c": 0,
+    "80ccd_1b": 0,
+    "80d": 0,
+    "80tta": 0,
+    "80g": 0,
+    "other_chapter_via": 0
+  },
+  "taxes_paid": {
+    "tds": 0,
+    "tcs": 0,
+    "advance_tax": 0,
+    "self_assessment_tax": 0
+  },
+  "flags": {
+    "foreign_assets": false,
+    "director_in_company": false,
+    "unlisted_equity_investment": false,
+    "agricultural_income": 0
+  }
+}
