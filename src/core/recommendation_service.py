@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from typing import Any, Dict, List
 
 from src.decision.itr_selector import decide_itr
@@ -12,16 +11,13 @@ from src.compute.tax_engine import (
 from src.explain.explain_regime_choice import explain_regime_choice
 from src.llm.llm_adapter import generate_user_explanation, generate_followup_questions
 from src.retrieval.basic_retriever import load_chunks, search
+from src.core.audit_logger import log_audit_event
 
 
 def get_tax_recommendation(profile: Dict[str, Any]) -> Dict[str, Any]:
-    # 0) Missing info
     missing_info = detect_missing_info(profile)
-
-    # 1) ITR decision
     itr, itr_reasons = decide_itr(profile)
 
-    # 2) Tax computation (OLD vs NEW)
     old_breakup = compute_taxable_income_old_regime(profile)
 
     old_tax = compute_old_regime(
@@ -34,21 +30,12 @@ def get_tax_recommendation(profile: Dict[str, Any]) -> Dict[str, Any]:
 
     regime = "NEW" if new_tax < old_tax else "OLD"
 
-    # 3) Deterministic explanation
-    explanation_lines = explain_regime_choice(
-        old_breakup,
-        old_tax,
-        new_tax
-    )
-
-    # 4) LLM adapter (language only)
+    explanation_lines = explain_regime_choice(old_breakup, old_tax, new_tax)
     user_explanation = generate_user_explanation(explanation_lines)
     followup_questions = generate_followup_questions(missing_info)
 
-    # 5) Citations (RAG-lite)
     chunks = load_chunks()
     citations_raw = search(chunks, f"{itr} eligibility", top_k=3, itr_form=itr)
-
     citations: List[Dict[str, Any]] = [
         {
             "doc_id": c.get("doc_id"),
@@ -59,7 +46,18 @@ def get_tax_recommendation(profile: Dict[str, Any]) -> Dict[str, Any]:
         for c in citations_raw
     ]
 
-    # 6) Stable response contract
+    # 🔍 Audit trail
+    request_id = profile.get("_request_id", "unknown")
+    log_audit_event(
+        request_id=request_id,
+        profile=profile,
+        itr=itr,
+        regime=regime,
+        old_tax=old_tax,
+        new_tax=new_tax,
+        income_breakup=old_breakup,
+    )
+
     return {
         "itr": {
             "recommended": itr,
