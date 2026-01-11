@@ -8,7 +8,7 @@
   },
   "income": {
     "salary": {
-      "gross_salary": 0,
+      "gross_salary": 1200000,
       "standard_deduction_claim": true,
       "exempt_allowances": 0
     },
@@ -45,13 +45,14 @@
     }
   },
   "deductions_old_regime": {
-    "80c": 0,
+    "80c": 150000,
     "80ccd_1b": 0,
-    "80d": 0,
+    "80d": 25000,
     "80tta": 0,
     "80g": 0,
     "other_chapter_via": 0
   },
+
   "taxes_paid": {
     "tds": 0,
     "tcs": 0,

@@ -16,19 +16,22 @@ Rules:
 
 Required fields:
 - doc_id (string, unique)
-- doc_type (act | rules | finance_act | circular | notification)
-- section (string)
-- sub_section (string or null)
-- ay (array of strings)
-- text (string, clean legal text)
+- doc_type (itr_instruction | validation_rule | booklet | circular | act)
+- itr_form (string, e.g. ITR-1, ITR-2, ITR-3, ITR-4; null if generic)
+- ay (array of strings, e.g. ["2025-26"])
+- section (string, logical section name)
+- field (string or null, UI field reference if applicable)
+- text (string, clean legal / instructional text)
 
 Example:
 ```json
+
 {
   "doc_id": "it_act_115bac_1a",
   "doc_type": "act",
-  "section": "115BAC",
-  "sub_section": "(1A)",
+  "itr_form": null,
   "ay": ["2024-25"],
+  "section": "115BAC",
+  "field": null,
   "text": "Notwithstanding anything contained in this Act..."
 }
