@@ -18,11 +18,13 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
-            <body className={cn(
-                "min-h-screen bg-background font-sans text-foreground antialiased",
-                inter.variable,
-                jetbrains.variable
-            )}>
+            <body
+                suppressHydrationWarning
+                className={cn(
+                    "min-h-screen bg-background font-sans text-foreground antialiased",
+                    inter.variable,
+                    jetbrains.variable
+                )}>
                 {children}
             </body>
         </html>

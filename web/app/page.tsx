@@ -48,7 +48,7 @@ export default function LandingPage() {
                         </p>
 
                         <div className="flex flex-wrap items-center gap-4 mt-4">
-                            <Link href="/ingest">
+                            <Link href="/onboarding">
                                 <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-6 text-lg rounded-xl shadow-lg shadow-emerald-900/20 transition-all hover:scale-105">
                                     Start Audit
                                     <ArrowRight className="ml-2 h-5 w-5" />

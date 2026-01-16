@@ -31,32 +31,36 @@ from .base import (
 # Form 16 field patterns (regex)
 FORM16_PATTERNS = {
     "gross_salary": [
-        r"Gross\s+[Ss]alary.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
-        r"1\.\s*Gross\s+[Ss]alary.*?(\d{1,3}(?:,\d{2,3})*)",
-        r"Total\s+[Ii]ncome\s+from\s+[Ss]alary.*?(\d{1,3}(?:,\d{2,3})*)",
+        r"Gross\s+[Ss]alary.*?([\d,]+(?:\.\d{2})?)",
+        r"1\.\s*Gross\s+[Ss]alary.*?([\d,]+(?:\.\d{2})?)",
+        r"Total\s+[Ii]ncome\s+from\s+[Ss]alary.*?([\d,]+(?:\.\d{2})?)",
+        r"\(d\)\s+Total\s+([\d,]+(?:\.\d{2})?)",
     ],
     "basic_salary": [
-        r"Basic\s+[Ss]alary.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
-        r"Total\s+Salary.*?(\d{1,3}(?:,\d{2,3})*)", 
+        r"Basic\s+[Ss]alary.*?([\d,]+(?:\.\d{2})?)",
+        r"Total\s+Salary.*?([\d,]+(?:\.\d{2})?)",
         # Fix: Consume "Section 17(1)" if present to avoid matching "17"
-        r"\(a\)\s+[Ss]alary(?:.*?17\(\d\))?.*?(\d{1,3}(?:,\d{2,3})*)",
+        # Fix: Support unformatted numbers
+        r"\(a\)\s+[Ss]alary(?:.*?17\(\d\))?.*?([\d,]+(?:\.\d{2})?)",
     ],
     "hra": [
-        r"HRA.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
-        r"House\s+[Rr]ent\s+[Aa]llowance(?:.*?u/s\s+[^\s]+)?\s+(\d{1,3}(?:,\d{2,3})*)", # Skip "u/s 10(13A)"
-        r"10\(13A\).*?(\d{1,3}(?:,\d{2,3})*)",
+        r"HRA.*?([\d,]+(?:\.\d{2})?)",
+        r"House\s+[Rr]ent\s+[Aa]llowance(?:.*?(?:u/s|section)\s+[^\s]+)?\s+([\d,]+(?:\.\d{2})?)",
+        r"10\(13A\).*?([\d,]+(?:\.\d{2})?)",
     ],
     "standard_deduction": [
-        r"[Ss]tandard\s+[Dd]eduction.*?(\d{4,}(?:,\d{2,3})*)",  # Require 4+ digits to avoid matching "16"
-        r"16\(ia\).*?(\d{4,}(?:,\d{2,3})*)",
+        r"[Ss]tandard\s+[Dd]eduction.*?(\d{4,}(?:,\d{2,3})*)",  # Keep d{4,} for safety against small numbers
+        r"16\(ia\).*?([\d,]{4,}(?:\.\d{2})?)",
         r"50,?000|75,?000",
     ],
     "tds_deducted": [
-        r"Net\s+Tax\s+Payable.*?(\d{1,3}(?:,\d{2,3})*)", 
-        r"[Tt]ax\s+[Dd]educted.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
-        r"TDS.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
-        r"[Tt]otal\s+[Tt]ax\s+[Dd]eposited.*?(\d{1,3}(?:,\d{2,3})*)",
-        r"Taxes\s+Deducted.*?(\d{1,3}(?:,\d{2,3})*)", 
+        # Fix: Avoid matching "(17-18)" reference numbers by ensuring we don't match inside parens
+        # or by consuming the parens explicitly
+        r"Net\s+Tax\s+Payable(?:\s*\(.*?\))?\s+([\d,]+(?:\.\d{2})?)", 
+        r"[Tt]ax\s+[Dd]educted.*?([\d,]+(?:\.\d{2})?)",
+        r"TDS.*?([\d,]+(?:\.\d{2})?)",
+        r"[Tt]otal\s+[Tt]ax\s+[Dd]eposited.*?([\d,]+(?:\.\d{2})?)",
+        r"Taxes\s+Deducted.*?([\d,]+(?:\.\d{2})?)", 
     ],
     "employer_name": [
         r"(TechNova\s+Solutions\s+Pvt\s+Ltd)",

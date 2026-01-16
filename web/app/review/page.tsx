@@ -114,17 +114,25 @@ import { Suspense } from "react";
 function ReviewContent() {
     const searchParams = useSearchParams();
     const isDemo = searchParams.get("demo") === "true";
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [classifications, setClassifications] = useState<Classification[]>([]);
-    const [showClassifications, setShowClassifications] = useState(false);
 
+    // State
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [classifications, setClassifications] = useState<Classification[]>([]);
+
+    // Clustering State
+    const [clusters, setClusters] = useState<Cluster[]>([]);
+    const [currentClusterIndex, setCurrentClusterIndex] = useState(0);
+    const [viewMode, setViewMode] = useState<"cluster" | "individual" | "complete">("cluster");
+    const [showClassifications, setShowClassifications] = useState(false);
 
     // Fetch transactions
     useEffect(() => {
         if (isDemo) {
-            setTransactions(DEMO_TRANSACTIONS);
+            // Generate 300 demo transactions for stress testing "Cluster Mode"
+            const generated = generateDemoTransactions();
+            setTransactions(generated);
+            setClusters(clusterTransactions(generated));
             return;
         }
 
@@ -134,17 +142,13 @@ function ReviewContent() {
                 const res = await fetch("http://localhost:8000/api/v1/review/transactions");
                 if (res.ok) {
                     const data = await res.json();
-                    // Map API data to UI structure if needed (checking keys)
-                    // API returns: id, date, description, amount, category, confidence
-                    // UI Expects: same + aiSuggestion (mapped from category)
-
                     const mapped = data.map((t: any) => ({
                         ...t,
                         aiSuggestion: t.category,
                         aiConfidence: Math.round(t.confidence * 100)
                     }));
-
                     setTransactions(mapped);
+                    setClusters(clusterTransactions(mapped));
                 }
             } catch (err) {
                 console.error("Failed to fetch transactions", err);
@@ -156,58 +160,46 @@ function ReviewContent() {
         fetchTransactions();
     }, [isDemo]);
 
-    const displayTransactions = transactions;
-    const currentTransaction = displayTransactions[currentIndex];
-    const isComplete = displayTransactions.length > 0 && classifications.length === displayTransactions.length;
+    // Derived Logic
+    const currentCluster = clusters[currentClusterIndex];
+    const isClusterComplete = currentClusterIndex >= clusters.length;
 
-    const classify = useCallback(
-        (category: "business" | "personal" | "gift" | "unsure") => {
-            if (isComplete) return;
-
-            if (!currentTransaction) return; // Guard
-
-            setClassifications((prev) => [
-                ...prev,
-                { transactionId: currentTransaction.id, category },
-            ]);
-
-            if (currentIndex < displayTransactions.length - 1) {
-                setCurrentIndex((prev) => prev + 1);
-            }
-        },
-        [currentIndex, currentTransaction, isComplete, displayTransactions.length]
-    );
-
-    // Keyboard shortcuts
+    // Switch to complete mode when done
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (isComplete) return;
+        if (transactions.length > 0 && classifications.length === transactions.length) {
+            setViewMode("complete");
+        } else if (isClusterComplete && transactions.length > 0) {
+            // If clusters are done but individual items remain (though clustering covers all, theoretically)
+            // In this logic, clustering covers everything.
+            setViewMode("complete");
+        }
+    }, [isClusterComplete, transactions.length, classifications.length]);
 
-            switch (e.key.toLowerCase()) {
-                case "b":
-                    classify("business");
-                    break;
-                case "p":
-                    classify("personal");
-                    break;
-                case "g":
-                    classify("gift");
-                    break;
-                case "u":
-                    classify("unsure");
-                    break;
-            }
-        };
+    const classifyCluster = (category: "business" | "personal" | "gift" | "unsure") => {
+        if (!currentCluster) return;
 
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [classify, isComplete]);
+        const newClassifications = currentCluster.transactions.map(t => ({
+            transactionId: t.id,
+            category
+        }));
+
+        setClassifications(prev => [...prev, ...newClassifications]);
+
+        if (currentClusterIndex < clusters.length - 1) {
+            setCurrentClusterIndex(prev => prev + 1);
+        } else {
+            setViewMode("complete");
+        }
+    };
 
     const undoLast = () => {
-        if (classifications.length === 0) return;
-        setClassifications((prev) => prev.slice(0, -1));
-        if (currentIndex > 0 && classifications.length === currentIndex + 1) {
-            setCurrentIndex((prev) => prev - 1);
+        if (currentClusterIndex > 0) {
+            const prevCluster = clusters[currentClusterIndex - 1];
+            // Remove classifications for this cluster
+            const idsToRemove = new Set(prevCluster.transactions.map(t => t.id));
+            setClassifications(prev => prev.filter(c => !idsToRemove.has(c.transactionId)));
+            setCurrentClusterIndex(prev => prev - 1);
+            setViewMode("cluster");
         }
     };
 
@@ -219,237 +211,250 @@ function ReviewContent() {
 
     const counts = getCategoryCounts();
 
+    // Helper to format currency
+    const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");
+
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col">
-            {/* Demo Banner */}
             {isDemo && <DemoBanner />}
 
-            {/* Tunnel Header */}
             <TunnelHeader
-                title={isComplete
-                    ? (isDemo ? "Classification Complete" : "Review Finalized")
-                    : (isDemo ? "Transaction Review" : "Intelligent Classification")
+                title={viewMode === "complete"
+                    ? "Classification Complete"
+                    : viewMode === "cluster"
+                        ? "Rapid Cluster Review"
+                        : "Transaction Review"
                 }
-                step={isComplete ? 4 : 3}
+                step={viewMode === "complete" ? 4 : 3}
                 totalSteps={5}
                 backHref={isDemo ? "/ingest?demo=true" : "/ingest"}
                 isDemo={isDemo}
             />
 
-            {/* Main Content */}
             <main className="flex-1 container py-8 px-4">
                 <div className="max-w-3xl mx-auto space-y-6">
-                    {/* Instructions Card */}
-                    <div className={cn(
-                        "border rounded-xl p-5 transition-all duration-300",
-                        isDemo ? "bg-slate-900 border-slate-800" : "bg-emerald-500/5 border-emerald-500/20"
-                    )}>
-                        <div className="flex items-start gap-4">
-                            <div className="text-2xl">{isDemo ? "💡" : "✨"}</div>
-                            <div>
-                                <h2 className="text-lg font-semibold text-white mb-2">
-                                    {isDemo ? "Demo: Classify These Transactions" : "Review High-Value Transactions"}
+
+                    {/* Progress Bar for Clusters */}
+                    {viewMode === "cluster" && clusters.length > 0 && (
+                        <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
+                            <div
+                                className="h-full bg-emerald-500 transition-all duration-300"
+                                style={{ width: `${(currentClusterIndex / clusters.length) * 100}%` }}
+                            />
+                        </div>
+                    )}
+
+                    {viewMode === "cluster" && currentCluster ? (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h2 className="text-3xl font-bold text-white mb-2">
+                                    {currentCluster.name}
                                 </h2>
-                                <p className="text-slate-400 text-sm mb-2">
-                                    {isDemo
-                                        ? "Click a button or use keyboard shortcuts below."
-                                        : "Our AI has flagged these for review. Confirm or change categories to optimize your tax position."
-                                    }
+                                <p className="text-slate-400">
+                                    Found <span className="text-emerald-400 font-mono font-bold">{currentCluster.count}</span> similar transactions
+                                    totaling <span className="text-white font-mono font-bold">{fmt(currentCluster.totalAmount)}</span>
                                 </p>
-                                <div className="flex flex-wrap gap-2 mt-3">
-                                    <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono text-slate-400">B: Business</kbd>
-                                    <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono text-slate-400">P: Personal</kbd>
-                                    <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono text-slate-400">G: Gift</kbd>
-                                    <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono text-slate-400">U: Unsure</kbd>
-                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Transaction Card or Completion State */}
-                    {displayTransactions.length === 0 && !isLoading ? (
-                        <div className="text-center py-12 border rounded-xl border-dashed border-slate-800">
-                            <div className="text-4xl mb-4">📂</div>
-                            <h3 className="text-xl font-semibold text-white mb-2">No Transactions Found</h3>
-                            <p className="text-slate-400 mb-6">Upload a bank statement to start reviewing.</p>
-                            <Link href="/ingest">
-                                <Button variant="outline">Go to Upload</Button>
-                            </Link>
-                        </div>
-                    ) : !isComplete && currentTransaction ? (
-                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
-                            {/* Transaction Header */}
-                            <div className="flex items-center justify-between">
-                                <div className="text-slate-400 text-sm font-medium">
-                                    Item {currentIndex + 1} of {displayTransactions.length}
+                            {/* Sample Transactions in Cluster */}
+                            <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+                                <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 text-xs text-slate-500 uppercase tracking-wider">
+                                    Examples from this cluster
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-500">AI Confidence:</span>
-                                    <span
-                                        className={cn(
-                                            "text-sm font-semibold",
-                                            currentTransaction.aiConfidence >= 80
-                                                ? "text-emerald-400"
-                                                : currentTransaction.aiConfidence >= 60
-                                                    ? "text-amber-400"
-                                                    : "text-red-400"
-                                        )}
-                                    >
-                                        {currentTransaction.aiConfidence}%
-                                    </span>
+                                <div className="divide-y divide-slate-800/50">
+                                    {currentCluster.transactions.slice(0, 3).map(t => (
+                                        <div key={t.id} className="flex justify-between p-4 text-sm">
+                                            <span className="text-slate-300">{t.description}</span>
+                                            <div className="text-right">
+                                                <div className="font-mono text-white">{fmt(t.amount)}</div>
+                                                <div className="text-xs text-slate-500">{t.date}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {currentCluster.count > 3 && (
+                                        <div className="p-3 text-center text-xs text-slate-500 italic">
+                                            + {currentCluster.count - 3} more similar items
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Transaction Details */}
-                            <div className="text-center py-8 border-l-4 border-emerald-500/30 pl-6 bg-slate-800/30 rounded-r-xl">
-                                <div className="text-sm text-slate-400 mb-2">
-                                    {currentTransaction.date}
-                                </div>
-                                <div className="text-5xl font-mono font-bold text-emerald-400 mb-2">
-                                    ₹{currentTransaction.amount.toLocaleString("en-IN")}
-                                </div>
-                                <div className="text-slate-300 font-mono text-sm tracking-wide bg-slate-950/50 py-2 px-4 rounded-lg inline-block">
-                                    {currentTransaction.description}
-                                </div>
-                                <div className="mt-4 text-sm text-slate-400">
-                                    AI Recommendation:{" "}
-                                    <span className="text-white font-semibold capitalize underline decoration-emerald-500/50 decoration-2">
-                                        {currentTransaction.aiSuggestion}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Classification Buttons */}
+                            {/* Review Actions */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {(["business", "personal", "gift", "unsure"] as const).map(
-                                    (category) => {
-                                        const config = CATEGORY_CONFIG[category];
-                                        const Icon = config.icon;
-                                        const isAiPick =
-                                            category === currentTransaction.aiSuggestion;
+                                {(["business", "personal", "gift", "unsure"] as const).map((category) => {
+                                    const config = CATEGORY_CONFIG[category];
+                                    const Icon = config.icon;
+                                    const isAiPick = category === currentCluster.commonCategory;
 
-                                        return (
-                                            <button
-                                                key={category}
-                                                onClick={() => classify(category)}
-                                                className={cn(
-                                                    "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200",
-                                                    "hover:scale-[1.02] active:scale-95",
-                                                    isAiPick ? config.activeColor : config.color
-                                                )}
-                                            >
-                                                {isAiPick && (
-                                                    <Badge
-                                                        variant="ai"
-                                                        className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5"
-                                                    >
-                                                        AI Pick
-                                                    </Badge>
-                                                )}
-                                                <Icon className="w-5 h-5 mb-2" />
-                                                <span className="font-semibold text-xs">
-                                                    {config.label}
-                                                </span>
-                                                <span className="text-[10px] text-slate-500 mt-0.5">
-                                                    {config.subtitle}
-                                                </span>
-                                                <div className="mt-2 px-1.5 py-0.5 bg-slate-800 rounded text-[9px] font-mono text-slate-500 border border-slate-700">
-                                                    {config.shortcut}
-                                                </div>
-                                            </button>
-                                        );
-                                    }
-                                )}
+                                    return (
+                                        <button
+                                            key={category}
+                                            onClick={() => classifyCluster(category)}
+                                            className={cn(
+                                                "relative flex flex-col items-center p-6 rounded-xl border-2 transition-all duration-200",
+                                                "hover:scale-[1.02] active:scale-95",
+                                                isAiPick ? config.activeColor : config.color
+                                            )}
+                                        >
+                                            {isAiPick && (
+                                                <Badge variant="ai" className="absolute -top-3 -right-2">
+                                                    AI Pick ({currentCluster.confidence}%)
+                                                </Badge>
+                                            )}
+                                            <Icon className="w-8 h-8 mb-3" />
+                                            <span className="font-bold text-sm uppercase tracking-wide">
+                                                {config.label}
+                                            </span>
+                                            <span className="text-xs opacity-70 mt-1">
+                                                Apply to all {currentCluster.count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex justify-center mt-8">
+                                <button
+                                    onClick={undoLast}
+                                    disabled={currentClusterIndex === 0}
+                                    className="flex items-center gap-2 text-slate-500 hover:text-white disabled:opacity-30"
+                                >
+                                    <Undo2 className="w-4 h-4" />
+                                    Undo previous cluster
+                                </button>
                             </div>
                         </div>
-                    ) : (
+                    ) : viewMode === "complete" ? (
                         /* Completion State */
-                        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-8 text-center space-y-6">
-                            <div className="text-6xl">✅</div>
-                            <h2 className="text-2xl font-bold text-white">
-                                {isDemo ? "All Transactions Classified!" : "Review Cycle Complete"}
-                            </h2>
+                        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-8 text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                            <div className="text-6xl">🎉</div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-white mb-2">
+                                    You're a Speed Demon!
+                                </h2>
+                                <p className="text-slate-400">
+                                    You just classified <span className="text-white font-bold">{transactions.length} transactions</span> in just a few clicks.
+                                    <br />That's the power of Cluster Review.
+                                </p>
+                            </div>
 
                             {/* Category Summary */}
                             <div className="flex flex-wrap items-center justify-center gap-3">
-                                <Badge
-                                    variant={counts.business > 0 ? "warning" : "outline"}
-                                    className="px-3 py-1"
-                                >
+                                <Badge variant={counts.business > 0 ? "warning" : "outline"} className="px-3 py-1 text-lg">
                                     {counts.business} Business
                                 </Badge>
-                                <Badge
-                                    variant={counts.personal > 0 ? "info" : "outline"}
-                                    className="px-3 py-1"
-                                >
+                                <Badge variant={counts.personal > 0 ? "info" : "outline"} className="px-3 py-1 text-lg">
                                     {counts.personal} Personal
                                 </Badge>
-                                <Badge
-                                    variant={counts.gift > 0 ? "destructive" : "outline"}
-                                    className="px-3 py-1 bg-red-500/20 text-red-400 border-red-500/30"
-                                >
+                                <Badge variant={counts.gift > 0 ? "destructive" : "outline"} className="px-3 py-1 text-lg bg-red-500/20 text-red-400 border-red-500/30">
                                     {counts.gift} Gift
-                                </Badge>
-                                <Badge variant="outline" className="px-3 py-1">
-                                    {counts.unsure} Unsure
                                 </Badge>
                             </div>
 
-                            {/* Expandable Classifications */}
-                            <button
-                                onClick={() => setShowClassifications(!showClassifications)}
-                                className="flex items-center gap-2 mx-auto text-sm text-slate-400 hover:text-white transition-colors"
-                            >
-                                <ChevronDown
-                                    className={cn(
-                                        "w-4 h-4 transition-transform",
-                                        showClassifications && "rotate-180"
-                                    )}
-                                />
-                                Summary details ({classifications.length})
-                            </button>
-
-                            {showClassifications && (
-                                <div className="space-y-2 text-left max-w-md mx-auto">
-                                    {classifications.map((c, idx) => {
-                                        const tx = displayTransactions.find((t) => t.id === c.transactionId);
-                                        return (
-                                            <div
-                                                key={idx}
-                                                className="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-2 text-xs border border-slate-700"
-                                            >
-                                                <span className="text-slate-300">
-                                                    <span className="font-mono">₹{tx?.amount.toLocaleString("en-IN")}</span> —{" "}
-                                                    <span className="capitalize">{c.category}</span>
-                                                </span>
-                                                <button
-                                                    onClick={undoLast}
-                                                    className="text-slate-500 hover:text-white"
-                                                >
-                                                    <Undo2 className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {/* Continue Button */}
                             <Link href={isDemo ? "/dashboard?demo=true" : "/dashboard"}>
-                                <Button
-                                    size="lg"
-                                    className="px-10 py-6 text-lg bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-900/30 transition-all hover:scale-105"
-                                >
-                                    {isDemo ? "Continue to Dashboard" : "Finalize Audit Results"}
+                                <Button size="lg" className="w-full sm:w-auto px-12 py-6 text-lg bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xl shadow-emerald-900/40 transition-all hover:scale-105 mt-4">
+                                    Generate Audit Report
                                     <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </Link>
+
+                        </div>
+                    ) : (
+                        <div className="text-center py-20">
+                            <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-4" />
+                            <p className="text-slate-400">Analyzing patterns...</p>
                         </div>
                     )}
                 </div>
             </main>
         </div>
     );
+}
+
+// --- Helper Functions and Types below ---
+
+interface Cluster {
+    id: string;
+    name: string;
+    transactions: Transaction[];
+    count: number;
+    totalAmount: number;
+    commonCategory: "business" | "personal" | "gift" | "unsure";
+    confidence: number;
+}
+
+function clusterTransactions(transactions: Transaction[]): Cluster[] {
+    const groups: Record<string, Transaction[]> = {};
+
+    // 1. Group by description (normalized)
+    transactions.forEach(t => {
+        // Normalize: "UBER INDIA RIDE" -> "UBER", "SWIGGY 1234" -> "SWIGGY"
+        // Simple heuristic: First 2 words, uppercase, remove numbers
+        const cleanDesc = t.description
+            .replace(/[0-9]/g, '')
+            .replace(/[-_]/g, ' ')
+            .trim()
+            .toUpperCase()
+            .split(' ')
+            .slice(0, 2) // Take first 2 words
+            .join(' ');
+
+        if (!groups[cleanDesc]) groups[cleanDesc] = [];
+        groups[cleanDesc].push(t);
+    });
+
+    // 2. Convert to Array and Sort by Count (High impact first)
+    return Object.entries(groups)
+        .map(([name, txs], idx) => {
+            // Calculate common category (mode)
+            const catCounts: Record<string, number> = {};
+            txs.forEach(t => {
+                catCounts[t.aiSuggestion] = (catCounts[t.aiSuggestion] || 0) + 1;
+            });
+            const commonCategory = Object.entries(catCounts)
+                .sort((a, b) => b[1] - a[1])[0][0] as any;
+
+            // Average confidence
+            const avgConf = Math.round(txs.reduce((sum, t) => sum + t.aiConfidence, 0) / txs.length);
+
+            return {
+                id: `cluster-${idx}`,
+                name: name || "MISC TRANSACTIONS",
+                transactions: txs,
+                count: txs.length,
+                totalAmount: txs.reduce((sum, t) => sum + t.amount, 0),
+                commonCategory,
+                confidence: avgConf
+            };
+        })
+        .sort((a, b) => b.count - a.count); // Sort by biggest clusters first
+}
+
+function generateDemoTransactions(): Transaction[] {
+    const patterns = [
+        { desc: "UBER RIDE", cat: "personal", amount: [200, 800] },
+        { desc: "ZOMATO ORDER", cat: "personal", amount: [300, 1500] },
+        { desc: "AWS SERVICES", cat: "business", amount: [5000, 12000] },
+        { desc: "WEWORK INDIA", cat: "business", amount: [15000, 15000] },
+        { desc: "STARBUCKS", cat: "personal", amount: [400, 900] },
+        { desc: "UPWORK PAYOUT", cat: "business", amount: [40000, 80000] },
+        { desc: "CREDIT CARD BILL", cat: "personal", amount: [20000, 50000] },
+        { desc: "UPI TRANSFER", cat: "unsure", amount: [500, 5000] },
+    ];
+
+    const txs: Transaction[] = [];
+    for (let i = 0; i < 300; i++) {
+        const p = patterns[Math.floor(Math.random() * patterns.length)];
+        txs.push({
+            id: i + 1,
+            date: "2025-03-15",
+            description: `${p.desc} #${Math.floor(Math.random() * 1000)}`,
+            amount: Math.floor(Math.random() * (p.amount[1] - p.amount[0]) + p.amount[0]),
+            aiSuggestion: p.cat as any,
+            aiConfidence: Math.floor(Math.random() * 20) + 80 // 80-99%
+        });
+    }
+    return txs;
 }
 
 import { useSearchParams } from "next/navigation";

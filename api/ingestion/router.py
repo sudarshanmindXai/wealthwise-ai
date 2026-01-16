@@ -145,7 +145,13 @@ async def process_file_async(task_id: str, file_path: Path, filename: str):
         
         # Process with streaming
         for progress_update in pipeline.process_streaming(file_path):
-            _tasks[task_id]["status"] = progress_update.status.value
+            # Update task state
+            current_status = getattr(progress_update.status, "value", str(progress_update.status))
+            
+            # Only update status immediately if NOT complete (to avoid race condition)
+            if current_status != "complete":
+                _tasks[task_id]["status"] = current_status
+            
             _tasks[task_id]["progress"] = progress_update.progress
             _tasks[task_id]["current_step"] = progress_update.current_step
             
@@ -155,8 +161,10 @@ async def process_file_async(task_id: str, file_path: Path, filename: str):
             # Small delay to allow WS to pick up changes
             await asyncio.sleep(0.1)
             
-            if progress_update.status == ParseStatus.COMPLETE:
+            # Handle completion atomically
+            if current_status == "complete":
                 _tasks[task_id]["result"] = progress_update.partial_results
+                _tasks[task_id]["status"] = "complete"  # Set status LAST
         
     except Exception as e:
         import traceback

@@ -119,7 +119,7 @@ const DEMO_FILES: Record<string, UploadedFile[]> = {
     salary: [
         {
             id: "demo-1",
-            file: new File([], "form16_vikram.pdf"),
+            file: new File([], "form16_rohan.pdf"),
             status: "success",
             progress: 100,
             detectedType: "form16",
@@ -136,7 +136,7 @@ const DEMO_FILES: Record<string, UploadedFile[]> = {
     bank: [
         {
             id: "demo-2",
-            file: new File([], "bank_statement_vikram.csv"),
+            file: new File([], "bank_statement_rohan.csv"),
             status: "success",
             progress: 100,
             detectedType: "bank_statement",
@@ -147,6 +147,7 @@ const DEMO_FILES: Record<string, UploadedFile[]> = {
                 business_income: 1200000,
                 ambiguous_count: 5,
                 personal: 150000,
+                warnings: ["5 transactions need your review"],
             },
             warnings: ["5 transactions need your review"],
         },
@@ -154,7 +155,7 @@ const DEMO_FILES: Record<string, UploadedFile[]> = {
     portfolio: [
         {
             id: "demo-3",
-            file: new File([], "Zerodha_pnl_vikram.xlsx"),
+            file: new File([], "Zerodha_pnl_rohan.xlsx"),
             status: "success",
             progress: 100,
             detectedType: "broker_statement",
@@ -171,7 +172,7 @@ const DEMO_FILES: Record<string, UploadedFile[]> = {
     investments: [
         {
             id: "demo-4",
-            file: new File([], "elss_receipt_vikram.pdf"),
+            file: new File([], "elss_receipt_rohan.pdf"),
             status: "success",
             progress: 100,
             detectedType: "investment_statement",
@@ -396,7 +397,7 @@ function FileUploadZone({
                             {files.some((f) => f.warnings && f.warnings.length > 0) && (
                                 <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-amber-400 text-xs">
                                     <AlertTriangle className="w-4 h-4 shrink-0" />
-                                    <span>{files.flatMap((f) => f.warnings || []).join(", ")}</span>
+                                    <span>{Array.from(new Set(files.flatMap((f) => f.warnings || []))).join(", ")}</span>
                                 </div>
                             )}
                         </div>
@@ -456,8 +457,25 @@ function IngestContent() {
     );
     const [isLoading, setIsLoading] = useState(isDemo);
     const [overallStatus, setOverallStatus] = useState<"idle" | "processing" | "complete">("idle");
+    const [activeGuardians, setActiveGuardians] = useState<Set<string>>(new Set());
 
-    // Simulate demo loading
+    // Load active guardians
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem("activeGuardians");
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    setActiveGuardians(new Set(parsed));
+                } catch (e) {
+                    console.error("Failed to parse activeGuardians", e);
+                }
+            } else if (isDemo) {
+                // Default demo guardians
+                setActiveGuardians(new Set(["sentinel", "shield", "architect"]));
+            }
+        }
+    }, [isDemo]);
     useEffect(() => {
         if (isDemo) {
             const timer = setTimeout(() => setIsLoading(false), 1500);
@@ -596,11 +614,32 @@ function IngestContent() {
         }));
     }, []);
 
-    // Check if required categories have files
-    const requiredCategories = CATEGORIES.filter((c) => c.required);
-    const allRequiredHaveFiles = requiredCategories.every(
-        (c) => categoryFiles[c.id]?.some((f) => f.status === "success" || f.status === "needs_review")
-    );
+    // Category Mapping Logic
+    const GUARDIAN_TO_CATEGORIES: Record<string, string[]> = {
+        sentinel: ["salary", "investments"],
+        shield: ["bank"],
+        architect: ["portfolio"],
+        warden: ["other"],
+    };
+
+    // Filter categories based on active guardians
+    const visibleCategories = CATEGORIES.filter((category) => {
+        // Always show 'other' category
+        if (category.id === "other") return true;
+
+        // If no guardians selected yet (direct access), show all required
+        if (activeGuardians.size === 0 && !isDemo) return true;
+
+        // Check if category is mapped to any active guardian
+        return Array.from(activeGuardians).some(guardianId =>
+            GUARDIAN_TO_CATEGORIES[guardianId]?.includes(category.id)
+        );
+    });
+
+    // Check if visible required categories have files
+    const allRequiredHaveFiles = visibleCategories
+        .filter(c => c.required)
+        .every((c) => categoryFiles[c.id]?.some((f) => f.status === "success" || f.status === "needs_review"));
     const totalFiles = Object.values(categoryFiles).flat().length;
     const successfulFiles = Object.values(categoryFiles)
         .flat()
@@ -656,20 +695,23 @@ function IngestContent() {
                                     {isDemo ? (
                                         <>
                                             Sample documents for{" "}
-                                            <span className="text-amber-400 underline">Vikram Kumar</span> have been
+                                            <span className="text-amber-400 underline">Rohan Sharma</span> have been
                                             pre-loaded.
                                         </>
                                     ) : (
                                         "Upload multiple files per category. All processing happens securely on the server. Your data is never shared."
                                     )}
                                 </p>
-                                {!isDemo && (
-                                    <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-                                        <span>✅ Multi-file support</span>
-                                        <span>✅ Auto-detection</span>
-                                        <span>✅ Max 10MB/file</span>
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-3 text-xs text-slate-500">
+                                    <div className="flex items-center gap-2 text-emerald-400/80 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
+                                        <ShieldCheck className="w-3 h-3" />
+                                        <span>PII Scrubbing Active: Personal details removed</span>
                                     </div>
-                                )}
+                                    <div className="flex gap-4">
+                                        <span>✅ Encryption (TLS 1.3)</span>
+                                        <span>✅ Auto-deletion</span>
+                                    </div>
+                                </div>
                             </div>
                             {totalFiles > 0 && (
                                 <div className="text-right">
@@ -682,7 +724,7 @@ function IngestContent() {
 
                     {/* Document Categories */}
                     <div className="space-y-4">
-                        {CATEGORIES.map((category) => (
+                        {visibleCategories.map((category) => (
                             <FileUploadZone
                                 key={category.id}
                                 category={category}
