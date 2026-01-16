@@ -193,8 +193,8 @@ I can help with:
                             >
                                 <div
                                     className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                            ? 'bg-primary-600 text-white'
-                                            : 'bg-surface-elevated text-white/90'
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-surface-elevated text-white/90'
                                         }`}
                                 >
                                     <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
