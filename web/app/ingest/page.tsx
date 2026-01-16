@@ -485,47 +485,92 @@ function IngestContent() {
             setCategoryFiles((prev) => ({
                 ...prev,
                 [categoryId]: prev[categoryId].map((f) =>
-                    f.id === uploadedFile.id ? { ...f, status: "uploading" as const, progress: 30 } : f
+                    f.id === uploadedFile.id ? { ...f, status: "uploading" as const, progress: 10 } : f
                 ),
             }));
 
             try {
                 const formData = new FormData();
-                formData.append("files", uploadedFile.file);
+                formData.append("file", uploadedFile.file);
 
-                const response = await fetch("http://localhost:8000/ingest", {
+                // 1. Initiate Upload
+                const uploadRes = await fetch("http://localhost:8000/api/v1/ingest/upload", {
                     method: "POST",
                     body: formData,
                 });
 
-                if (!response.ok) {
-                    throw new Error("Upload failed");
+                if (!uploadRes.ok) {
+                    const err = await uploadRes.json();
+                    throw new Error(err.detail || "Upload failed");
                 }
 
-                const result = await response.json();
-                const fileResult = result.files?.[0];
+                const uploadData = await uploadRes.json();
+                const taskId = uploadData.task_id;
 
-                if (fileResult) {
+                // 2. Poll for Status
+                let isComplete = false;
+                let pollAttempts = 0;
+
+                while (!isComplete && pollAttempts < 60) { // Timeout after 60s
+                    await new Promise(r => setTimeout(r, 1000)); // Wait 1s
+
+                    const statusRes = await fetch(`http://localhost:8000/api/v1/ingest/status/${taskId}`);
+
+                    if (!statusRes.ok) continue;
+
+                    const statusData = await statusRes.json();
+
+                    // Update progress
                     setCategoryFiles((prev) => ({
                         ...prev,
                         [categoryId]: prev[categoryId].map((f) =>
                             f.id === uploadedFile.id
-                                ? {
-                                    ...f,
-                                    status: fileResult.status as UploadedFile["status"],
-                                    progress: 100,
-                                    detectedType: fileResult.detected_type,
-                                    typeDescription: fileResult.type_description,
-                                    confidence: fileResult.confidence,
-                                    extractedData: fileResult.extracted_data,
-                                    taxFacts: fileResult.tax_facts,
-                                    warnings: fileResult.warnings,
-                                    error: fileResult.error,
-                                }
+                                ? { ...f, progress: statusData.progress, status: "processing" }
                                 : f
                         ),
                     }));
+
+                    if (statusData.status === "complete") {
+                        isComplete = true;
+
+                        // Transform extracted fields to key-value pairs
+                        const extractedMap: Record<string, any> = {};
+                        if (statusData.result?.fields) {
+                            statusData.result.fields.forEach((field: any) => {
+                                extractedMap[field.name] = field.value;
+                            });
+                        }
+
+                        setCategoryFiles((prev) => ({
+                            ...prev,
+                            [categoryId]: prev[categoryId].map((f) =>
+                                f.id === uploadedFile.id
+                                    ? {
+                                        ...f,
+                                        status: "success",
+                                        progress: 100,
+                                        detectedType: statusData.document_type,
+                                        extractedData: extractedMap,
+                                        confidence: 1.0, // Should come from overall confidence if available
+                                        warnings: statusData.result?.warnings || [],
+                                        error: statusData.result?.errors && statusData.result.errors.length > 0
+                                            ? statusData.result.errors[0]
+                                            : undefined,
+                                    }
+                                    : f
+                            ),
+                        }));
+                    } else if (statusData.status === "error" || statusData.status === "failed") {
+                        throw new Error(statusData.error || "Processing failed");
+                    }
+
+                    pollAttempts++;
                 }
+
+                if (!isComplete) {
+                    throw new Error("Processing timed out");
+                }
+
             } catch (error) {
                 setCategoryFiles((prev) => ({
                     ...prev,
