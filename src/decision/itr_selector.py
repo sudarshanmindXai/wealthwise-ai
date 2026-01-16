@@ -5,18 +5,37 @@ def decide_itr(profile):
     income = profile.get("income", {}) or {}
     flags = profile.get("flags", {}) or {}
 
-    bp = income.get("business_profession", {}) or {}
-    cg = income.get("capital_gains", {}) or {}
-    hp = income.get("house_property", {}) or {}
+    # V1 format
+    if isinstance(income, dict) and income:
+        bp = income.get("business_profession", {}) or {}
+        cg = income.get("capital_gains", {}) or {}
+        hp = income.get("house_property", {}) or {}
 
-    has_business = bp.get("has_business_income", False)
-    presumptive = bp.get("presumptive", {}).get("opted", False)
-    has_cg = cg.get("has_capital_gains", False)
-    hp_count = hp.get("count_properties", 0)
-    foreign_assets = flags.get("foreign_assets", False)
+        has_business = bp.get("has_business_income", False)
+        presumptive = bp.get("presumptive", {}).get("opted", False)
+        has_cg = cg.get("has_capital_gains", False)
+        hp_count = hp.get("count_properties", 0)
+        foreign_assets = flags.get("foreign_assets", False)
 
-    is_director = flags.get("director_in_company", False)
-    has_unlisted_equity = flags.get("unlisted_equity_investment", False)
+        is_director = flags.get("director_in_company", False)
+        has_unlisted_equity = flags.get("unlisted_equity_investment", False)
+    else:
+        # V2 TaxFacts format
+        has_business = profile.get("business_has_income", False)
+        presumptive = profile.get("business_presumptive_opted", False)
+        has_cg = any(
+            float(profile.get(k, 0) or 0) > 0
+            for k in [
+                "capital_gains_stcg_111a",
+                "capital_gains_stcg_other",
+                "capital_gains_ltcg_112a",
+                "capital_gains_ltcg_other",
+            ]
+        )
+        hp_count = int(profile.get("property_count", 0) or 0)
+        foreign_assets = False
+        is_director = False
+        has_unlisted_equity = False
 
     # ---- Business cases ----
     if has_business and presumptive:

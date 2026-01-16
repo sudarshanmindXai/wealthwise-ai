@@ -4,7 +4,8 @@ from typing import Dict, Any
 ALLOWED_DOMAIN_KEYWORDS = [
     "tax", "itr", "income", "deduction",
     "regime", "salary", "assessment year",
-    "section", "act", "return"
+    "section", "act", "return",
+    "80c", "80ccd", "80d", "nps"
 ]
 
 

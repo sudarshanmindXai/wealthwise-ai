@@ -1,0 +1,35 @@
+# WealthWise AI - Python Dependencies
+
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.2
+python-multipart==0.0.6
+
+# Streamlit UI
+streamlit==1.29.0
+plotly==5.18.0
+
+# HTTP & Requests
+requests==2.31.0
+httpx==0.25.2
+
+# PDF Processing (Document Ingestion)
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+reportlab==4.2.2
+
+# OpenAI SDK (for OpenRouter)
+openai==1.6.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+
+# Code Quality
+black==23.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Utilities
+python-dotenv==1.0.0

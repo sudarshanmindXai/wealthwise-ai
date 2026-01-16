@@ -100,7 +100,7 @@ TaxProfile:
 
 ### v1 Limitations
 ❌ Limited income/deduction fields (only ~30 out of 80+ needed)  
-❌ No document upload capability  
+✅ ~~No document upload capability~~ **IMPLEMENTED in v2.0 with GPT-4 Vision**  
 ❌ No scenario analysis ("what-if" scenarios)  
 ❌ No investment breakdown (only total amounts)  
 ❌ No home loan details (only interest amount)  
@@ -122,13 +122,18 @@ TaxProfile:
 
 ### v2 Architecture (Agent-Based)
 
-#### **Agent 1: Document Ingestion Agent**
-- **Input:** Uploaded PDF (Form 16, Bank Statement, Investment Statement)
-- **Process:** Use LLM + PDF parsing to extract structured data
+#### **Agent 1: Document Ingestion Agent** ✅ IMPLEMENTED
+- **Input:** Uploaded PDF (Form 16, Bank Statement, Investment Statement, Home Loan Certificate, etc.)
+- **Process:** Use GPT-4 Vision + PDF parsing to extract structured data
 - **Output:** Partially extracted data with confidence flags
 - **Characteristics:** All extraction marked as "user-verifiable"; users can override
-- **v2 Launch:** Mocked (UI ready, extraction logic ready in v2.1)
-- **v2.1 (Quick follow-up):** Real Form 16 parsing on known templates → High accuracy on standard Form 16 formats; user verification required for edge cases and non-standard documents
+- **Status:** ✅ **FULLY IMPLEMENTED** in v2.0
+  - Universal document detector (20+ document types)
+  - GPT-4 Vision extraction with OpenRouter
+  - Field mapping to TaxFacts schema
+  - Provenance tracking (source, confidence, timestamp)
+  - Multi-document upload support
+  - Extraction verification UI with edit capability
 
 #### **Agent 2: TaxFacts Normalization Agent**
 - **Input:** Data from multiple sources (UI, documents, chat clarifications)
@@ -417,7 +422,7 @@ Standard Deduction on Rental Property (30%)**
   - Stage 1: Essential fields only (salary, TDS, year)
   - Stage 2: Conditional sections (if has home loan, investments, rental, dependents)
   - Stage 3: Scenario selection (checkboxes)
-  - Stage 4: Document upload area (mocked)
+  - Stage 4: Document upload area ✅ **IMPLEMENTED** (multi-document upload with extraction verification)
 
 - [ ] **1.5 Verify End-to-End** (30 mins)
   - Test that new TaxFacts flows through tax_engine.py
@@ -562,7 +567,7 @@ Response: Recommendation + Scenarios + Data Provenance
 | **Home Loan** | ✅ Interest only | ✅ Full details |
 | **Deductions** | 5 sections | 9+ sections |
 | **Scenarios** | ❌ None | ✅ 8-10 scenarios |
-| **Document Upload** | ❌ None | ✅ UI ready |
+| **Document Upload** | ❌ None | ✅ **IMPLEMENTED** (GPT-4 Vision extraction) |
 | **Progressive UI** | ❌ All fields | ✅ Conditional |
 | **Data Provenance** | ❌ None | ✅ Full tracking |
 | **Scenario Chat** | ❌ Generic | ✅ User-specific |
@@ -576,10 +581,13 @@ Response: Recommendation + Scenarios + Data Provenance
 ✅ Users can enter 50+ TIER 1+2 fields (progressive disclosure)  
 ✅ Scenarios show real tax savings (cloned + recalculated)  
 ✅ Chat references user-specific data  
-✅ Document upload UI in place (ready for real extraction in v2.1)  
+✅ **Document upload IMPLEMENTED with GPT-4 Vision extraction (20+ document types)**  
 ✅ All recommendations remain deterministic and auditable  
 ✅ Data provenance tracked (source + confidence)  
 ✅ v1 API compatibility maintained  
-✅ Streamlit UI feels like ClearTax (professional, guided, progressive)  
+✅ Streamlit UI with finance-grade dark theme design system  
+✅ **Universal document extraction pipeline operational**  
+✅ **Multi-document upload with confidence scoring**  
+✅ **Extraction verification UI with edit capability**  
 
 ---
