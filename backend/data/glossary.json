@@ -1,0 +1,57 @@
+{
+    "terms": {
+        "87A": {
+            "section": "Section 87A",
+            "user_friendly": "Zero Tax Rebate",
+            "description": "Full tax rebate if taxable income ≤ ₹12L (New Regime) or ≤ ₹5L (Old Regime)",
+            "guardian": "math_engine"
+        },
+        "44ADA": {
+            "section": "Section 44ADA",
+            "user_friendly": "Presumptive Shield",
+            "description": "50% flat profit for professionals with receipts < ₹75L",
+            "guardian": "hustle_shield"
+        },
+        "115BBH": {
+            "section": "Section 115BBH",
+            "user_friendly": "Crypto Trap",
+            "description": "Flat 30% tax on VDA/Crypto. No set-off of losses allowed",
+            "guardian": "portfolio_architect"
+        },
+        "112A": {
+            "section": "Section 112A",
+            "user_friendly": "Harvesting Limit",
+            "description": "12.5% LTCG tax on equity with ₹1.25L exemption",
+            "guardian": "portfolio_architect"
+        },
+        "80CCD2": {
+            "section": "Section 80CCD(2)",
+            "user_friendly": "NPS Employer Boost",
+            "description": "Employer NPS contribution up to 14% of Basic+DA is deductible",
+            "guardian": "salary_sentinel"
+        },
+        "Rule3": {
+            "section": "Rule 3",
+            "user_friendly": "EV Lease Arbitrage",
+            "description": "Electric vehicle lease perquisite is minimal vs car loan EMI",
+            "guardian": "salary_sentinel"
+        },
+        "Sec24": {
+            "section": "Section 24",
+            "user_friendly": "Rent Deduction",
+            "description": "30% standard deduction on rental income",
+            "guardian": "windfall_warden"
+        },
+        "Sec64": {
+            "section": "Section 64(2)",
+            "user_friendly": "Clubbing Guard",
+            "description": "HUF income from personal transfer is added back to individual",
+            "guardian": "windfall_warden"
+        }
+    },
+    "meta": {
+        "fy": "2025-26",
+        "ay": "2026-27",
+        "last_updated": "2026-01-16"
+    }
+}
