@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -34,8 +34,64 @@ function DashboardContent() {
     const isDemo = searchParams.get("demo") === "true";
     const [activeNav, setActiveNav] = useState("overview");
     const [rentPaid, setRentPaid] = useState(20000);
+    const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Tax Calculation Logic
+    // Types
+    interface Insight {
+        title: string;
+        description: string;
+        impact_currency: number;
+        confidence: number;
+        category: "deduction" | "exemption" | "compliance" | "warning" | "info";
+        action_item?: string;
+    }
+
+    interface AnalysisResponse {
+        insights: Insight[];
+        total_potential_savings: number;
+    }
+
+    // Fetch Analysis (Simulated Context)
+    useEffect(() => {
+        const fetchAnalysis = async () => {
+            setIsLoading(true);
+            try {
+                // In a real app, this data would come from the session/backend
+                const res = await fetch("http://localhost:8000/api/v1/analysis/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        user_id: "demo_user",
+                        income_details: {
+                            salary: 1500000,
+                            hra: 300000, // Potential HRA
+                            rent_paid: rentPaid * 12, // Annualized
+                            business: 1000000,
+                            ltcg: 50000
+                        },
+                        regime: "new"
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setAnalysisData(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch analysis", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAnalysis();
+    }, [rentPaid]);
+
+    // Derived values
+    const potentialSavings = analysisData?.total_potential_savings || 82800;
+
+    // Tax Calculation Logic (Client-side fallback for sliders)
     const GROSS_INCOME = 2580000; // ₹25.8L total
     const STANDARD_DEDUCTION_OLD = 50000;
     const STANDARD_DEDUCTION_NEW = 75000;
@@ -52,8 +108,8 @@ function DashboardContent() {
 
     const savings = tax_old - tax_new;
     const isNewBetter = savings > 0;
-    const potentialSavings = 82800; // Fixed for demo
 
+    // Logic functions...
     function calculateTaxOld(income: number): number {
         if (income <= 250000) return 0;
         if (income <= 500000) return (income - 250000) * 0.05;
@@ -221,6 +277,40 @@ function DashboardContent() {
                             </span>
                         </div>
                     </div>
+
+                    {/* Guardian Insights (NEW) */}
+                    {analysisData?.insights && analysisData.insights.length > 0 && (
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="text-2xl">🛡️</span>
+                                <h2 className="text-lg font-semibold text-white">Guardian Intelligence</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {analysisData.insights.map((insight, idx) => (
+                                    <div key={idx} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-500/30 transition-colors">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <Badge variant={insight.category === "warning" ? "destructive" : "outline"} className="capitalize">
+                                                {insight.category}
+                                            </Badge>
+                                            {insight.impact_currency > 0 && (
+                                                <Badge variant="success" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                                                    Save ₹{Math.round(insight.impact_currency).toLocaleString("en-IN")}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <h3 className="font-semibold text-white text-sm mb-1">{insight.title}</h3>
+                                        <p className="text-xs text-slate-400 mb-3">{insight.description}</p>
+                                        {insight.action_item && (
+                                            <div className="text-xs text-emerald-400 font-medium flex items-center gap-1">
+                                                <Zap className="w-3 h-3" />
+                                                {insight.action_item}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Rent Optimizer */}
                     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">

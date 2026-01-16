@@ -118,18 +118,53 @@ function ReviewContent() {
     const [classifications, setClassifications] = useState<Classification[]>([]);
     const [showClassifications, setShowClassifications] = useState(false);
 
-    const transactions = isDemo ? DEMO_TRANSACTIONS : []; // In real mode, this would fetch from API
-    // For now, if not in demo, let's show a "No transactions found" or a placeholder if empty
-    // But since this is a UI implementation, I'll keep the demo data but mark it as production-styled if !isDemo
-    // To allow the user to see the UI.
-    const displayTransactions = DEMO_TRANSACTIONS;
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
+    // Fetch transactions
+    useEffect(() => {
+        if (isDemo) {
+            setTransactions(DEMO_TRANSACTIONS);
+            return;
+        }
+
+        const fetchTransactions = async () => {
+            setIsLoading(true);
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/review/transactions");
+                if (res.ok) {
+                    const data = await res.json();
+                    // Map API data to UI structure if needed (checking keys)
+                    // API returns: id, date, description, amount, category, confidence
+                    // UI Expects: same + aiSuggestion (mapped from category)
+
+                    const mapped = data.map((t: any) => ({
+                        ...t,
+                        aiSuggestion: t.category,
+                        aiConfidence: Math.round(t.confidence * 100)
+                    }));
+
+                    setTransactions(mapped);
+                }
+            } catch (err) {
+                console.error("Failed to fetch transactions", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTransactions();
+    }, [isDemo]);
+
+    const displayTransactions = transactions;
     const currentTransaction = displayTransactions[currentIndex];
-    const isComplete = classifications.length === displayTransactions.length;
+    const isComplete = displayTransactions.length > 0 && classifications.length === displayTransactions.length;
 
     const classify = useCallback(
         (category: "business" | "personal" | "gift" | "unsure") => {
             if (isComplete) return;
+
+            if (!currentTransaction) return; // Guard
 
             setClassifications((prev) => [
                 ...prev,
@@ -232,7 +267,16 @@ function ReviewContent() {
                     </div>
 
                     {/* Transaction Card or Completion State */}
-                    {!isComplete ? (
+                    {displayTransactions.length === 0 && !isLoading ? (
+                        <div className="text-center py-12 border rounded-xl border-dashed border-slate-800">
+                            <div className="text-4xl mb-4">📂</div>
+                            <h3 className="text-xl font-semibold text-white mb-2">No Transactions Found</h3>
+                            <p className="text-slate-400 mb-6">Upload a bank statement to start reviewing.</p>
+                            <Link href="/ingest">
+                                <Button variant="outline">Go to Upload</Button>
+                            </Link>
+                        </div>
+                    ) : !isComplete && currentTransaction ? (
                         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
                             {/* Transaction Header */}
                             <div className="flex items-center justify-between">

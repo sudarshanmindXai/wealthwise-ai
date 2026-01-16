@@ -41,9 +41,7 @@ from .parsers.base import DocumentType, detect_document_type
 router = APIRouter(prefix="/ingest", tags=["ingestion"])
 
 
-# In-memory task storage (use Redis in production)
-_tasks: dict[str, dict] = {}
-_batches: dict[str, dict] = {}
+from .store import tasks as _tasks, batches as _batches
 
 # Temp directory for uploads
 UPLOAD_DIR = Path(tempfile.gettempdir()) / "wealthwise_uploads"

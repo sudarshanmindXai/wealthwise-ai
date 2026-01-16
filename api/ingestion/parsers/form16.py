@@ -37,7 +37,9 @@ FORM16_PATTERNS = {
     ],
     "basic_salary": [
         r"Basic\s+[Ss]alary.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
-        r"\(a\)\s+[Ss]alary.*?(\d{1,3}(?:,\d{2,3})*)",
+        r"Total\s+Salary.*?(\d{1,3}(?:,\d{2,3})*)", 
+        # Fix: Consume "Section 17(1)" if present to avoid matching "17"
+        r"\(a\)\s+[Ss]alary(?:.*?17\(\d\))?.*?(\d{1,3}(?:,\d{2,3})*)",
     ],
     "hra": [
         r"HRA.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
