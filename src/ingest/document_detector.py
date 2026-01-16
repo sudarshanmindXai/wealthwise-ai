@@ -1,14 +1,16 @@
 """
 Document Type Detection Module
 
-Automatically identifies the type of uploaded tax document using LLM.
+Automatically identifies the type of uploaded tax document.
+Uses rule-based detection first, with optional LLM fallback.
 Supports all taxpayer types: Salaried, Business, Professional, Investor, Landlord.
 
 Universal approach: One detector for all document types.
 """
 
-from typing import Optional, Dict, Any
-import openai
+from typing import Optional, Dict, Any, List
+import os
+import re
 import json
 from enum import Enum
 
@@ -52,15 +54,124 @@ class DocumentType(str, Enum):
     UNKNOWN = "unknown"
 
 
-# OpenRouter configuration
-OPENROUTER_API_KEY = "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"
+# OpenRouter configuration - used as fallback
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
-# Initialize OpenAI client with OpenRouter
-client = openai.OpenAI(
-    base_url=OPENROUTER_BASE_URL,
-    api_key=OPENROUTER_API_KEY
-)
+# Rule-based detection patterns
+FILENAME_PATTERNS = {
+    DocumentType.FORM_16: [r"form\s*16", r"form16", r"tds\s*certificate"],
+    DocumentType.SALARY_SLIP: [r"salary\s*slip", r"payslip", r"pay\s*slip"],
+    DocumentType.BANK_STATEMENT: [r"bank\s*statement", r"bank_stmt", r"statement.*bank", r"hdfc.*statement", r"icici.*statement", r"sbi.*statement", r"axis.*statement"],
+    DocumentType.BROKER_STATEMENT: [r"zerodha", r"groww", r"upstox", r"angel", r"pnl", r"p&l", r"profit.*loss", r"tradebook", r"contract.*note"],
+    DocumentType.INVESTMENT_STATEMENT: [r"elss", r"ppf", r"nps", r"lic", r"mutual\s*fund", r"sip", r"mf\s*statement"],
+    DocumentType.RENTAL_AGREEMENT: [r"rent.*agreement", r"lease.*agreement", r"tenancy"],
+    DocumentType.RENT_RECEIPT: [r"rent\s*receipt"],
+    DocumentType.HOME_LOAN_STATEMENT: [r"home\s*loan", r"housing\s*loan", r"mortgage"],
+    DocumentType.MEDICAL_INSURANCE_RECEIPT: [r"health\s*insurance", r"medical\s*insurance", r"mediclaim"],
+    DocumentType.DEMAT_STATEMENT: [r"demat", r"cdsl", r"nsdl"],
+}
+
+# Content patterns for detection
+CONTENT_PATTERNS = {
+    DocumentType.FORM_16: [r"form\s*no\.\s*16", r"certificate.*tds", r"income.*tax.*department", r"employer.*tan", r"assessment\s*year"],
+    DocumentType.SALARY_SLIP: [r"basic\s*salary", r"gross\s*salary", r"net\s*pay", r"provident\s*fund", r"hra"],
+    DocumentType.BANK_STATEMENT: [r"opening\s*balance", r"closing\s*balance", r"transaction\s*date", r"withdrawal", r"deposit", r"cheque.*number", r"value\s*date"],
+    DocumentType.BROKER_STATEMENT: [r"realized\s*profit", r"unrealized", r"ltcg", r"stcg", r"capital\s*gain", r"buy.*sell", r"trade\s*date", r"settlement"],
+    DocumentType.INVESTMENT_STATEMENT: [r"contribution", r"interest\s*earned", r"ppf.*account", r"nps.*tier", r"elss.*fund", r"nav", r"units"],
+    DocumentType.RENTAL_AGREEMENT: [r"landlord", r"tenant", r"monthly\s*rent", r"security\s*deposit", r"lease\s*period"],
+    DocumentType.HOME_LOAN_STATEMENT: [r"principal", r"interest\s*paid", r"emi", r"outstanding\s*balance", r"loan\s*account"],
+    DocumentType.MEDICAL_INSURANCE_RECEIPT: [r"policy\s*number", r"premium", r"sum\s*insured", r"coverage"],
+}
+
+
+def detect_document_type_local(
+    file_content: bytes,
+    filename: str,
+    file_extension: str
+) -> Dict[str, Any]:
+    """
+    Detect document type using rule-based local analysis.
+    No API calls - works offline.
+    
+    Returns:
+        Dict with document_type, confidence, reasoning, suggestions
+    """
+    filename_lower = filename.lower()
+    ext = file_extension.lower().lstrip('.')
+    
+    # Extract text content for analysis
+    text_content = ""
+    try:
+        if ext == 'csv':
+            text_content = file_content.decode('utf-8', errors='ignore').lower()
+        elif ext in ['xlsx', 'xls']:
+            # For Excel, we check filename patterns primarily
+            text_content = filename_lower
+        elif ext == 'pdf':
+            # Try to extract text from PDF
+            try:
+                import io
+                from PyPDF2 import PdfReader
+                pdf_file = io.BytesIO(file_content)
+                reader = PdfReader(pdf_file)
+                if len(reader.pages) > 0:
+                    text_content = reader.pages[0].extract_text().lower()
+            except:
+                text_content = ""
+        else:
+            text_content = file_content.decode('utf-8', errors='ignore').lower()
+    except:
+        text_content = ""
+    
+    # Score each document type
+    scores: Dict[DocumentType, float] = {}
+    reasoning_parts: Dict[DocumentType, List[str]] = {}
+    
+    for doc_type, patterns in FILENAME_PATTERNS.items():
+        scores[doc_type] = 0
+        reasoning_parts[doc_type] = []
+        
+        for pattern in patterns:
+            if re.search(pattern, filename_lower, re.IGNORECASE):
+                scores[doc_type] += 0.4
+                reasoning_parts[doc_type].append(f"Filename matches '{pattern}'")
+    
+    for doc_type, patterns in CONTENT_PATTERNS.items():
+        if doc_type not in scores:
+            scores[doc_type] = 0
+            reasoning_parts[doc_type] = []
+        
+        for pattern in patterns:
+            if re.search(pattern, text_content, re.IGNORECASE):
+                scores[doc_type] += 0.15
+                reasoning_parts[doc_type].append(f"Content matches '{pattern}'")
+    
+    # Find best match
+    if scores:
+        best_type = max(scores, key=scores.get)
+        best_score = min(scores[best_type], 0.95)  # Cap at 0.95
+        
+        if best_score >= 0.3:
+            # Get suggestions (other high-scoring types)
+            suggestions = [
+                dt.value for dt, score in sorted(scores.items(), key=lambda x: -x[1])
+                if dt != best_type and score >= 0.3
+            ][:2]
+            
+            return {
+                "document_type": best_type.value,
+                "confidence": best_score,
+                "reasoning": "; ".join(reasoning_parts.get(best_type, [])[:3]) or "Pattern matching",
+                "suggestions": suggestions
+            }
+    
+    return {
+        "document_type": DocumentType.UNKNOWN.value,
+        "confidence": 0.0,
+        "reasoning": "No matching patterns found",
+        "suggestions": []
+    }
 
 
 def detect_document_type(
@@ -69,13 +180,15 @@ def detect_document_type(
     file_extension: str
 ) -> Dict[str, Any]:
     """
-    Detect the type of tax document using LLM analysis.
+    Detect the type of tax document.
+    
+    Uses local rule-based detection first, then falls back to LLM if needed.
     
     Workflow:
-    1. Extract text from document (if PDF/image)
-    2. Send first page/snippet to LLM
-    3. LLM classifies document type
-    4. Return type + confidence
+    1. Try local rule-based detection
+    2. If confidence >= 0.5, return result
+    3. Otherwise, try LLM if API key is available
+    4. Return best result
     
     Args:
         file_content (bytes): Raw file content
@@ -86,7 +199,7 @@ def detect_document_type(
         Dict with:
             - document_type (str): Detected type
             - confidence (float): Confidence score (0.0-1.0)
-            - reasoning (str): Why LLM classified this way
+            - reasoning (str): Why classified this way
             - suggestions (List[str]): Alternative possibilities
     
     Example:
@@ -100,11 +213,30 @@ def detect_document_type(
         }
     """
     
-    # Extract text preview (first 2000 chars for classification)
-    text_preview = extract_text_preview(file_content, file_extension)
+    # Try local rule-based detection first
+    local_result = detect_document_type_local(file_content, filename, file_extension)
     
-    # Build LLM prompt
-    prompt = f"""You are a tax document classifier for Indian income tax documents.
+    # If local detection is confident enough, return it
+    if local_result["confidence"] >= 0.5:
+        return local_result
+    
+    # If no API key, return local result even if low confidence
+    if not OPENROUTER_API_KEY:
+        return local_result
+    
+    # Try LLM for better detection
+    try:
+        import openai
+        client = openai.OpenAI(
+            base_url=OPENROUTER_BASE_URL,
+            api_key=OPENROUTER_API_KEY
+        )
+        
+        # Extract text preview (first 2000 chars for classification)
+        text_preview = extract_text_preview(file_content, file_extension)
+        
+        # Build LLM prompt
+        prompt = f"""You are a tax document classifier for Indian income tax documents.
 
 Analyze this document and classify it into ONE of these types:
 
@@ -209,7 +341,9 @@ Respond ONLY with valid JSON, no other text."""
         return result
     
     except Exception as e:
-        # Fallback: Return unknown with error details
+        # Fallback to local result if LLM fails
+        if local_result["confidence"] > 0:
+            return local_result
         return {
             "document_type": DocumentType.UNKNOWN.value,
             "confidence": 0.0,
