@@ -75,6 +75,10 @@ class SalarySlipParser(BaseParser):
             keywords = ["salary slip", "pay slip", "payslip", "earnings", "deductions", "net pay", "basic salary"]
             match_count = sum(1 for kw in keywords if kw in text_lower)
             
+            with open("debug_salary_detect.txt", "a") as f:
+                f.write(f"Checking {file_path.name}: matches={match_count}, text_len={len(text)}\n")
+                f.write(f"Keywords found: {[kw for kw in keywords if kw in text_lower]}\n")
+            
             if match_count >= 2:
                 # High confidence if we see "Salary Slip" or "Pay Slip"
                 if "salary slip" in text_lower or "pay slip" in text_lower:
@@ -82,7 +86,7 @@ class SalarySlipParser(BaseParser):
                 return True, 0.85
                 
             return False, 0.0
-        except Exception:
+        except Exception as e:
             return False, 0.0
 
     def _extract_text(self, file_path: Path) -> tuple[str, int]:
@@ -136,6 +140,12 @@ class SalarySlipParser(BaseParser):
             
         try:
             text, page_count = self._extract_text(file_path)
+            
+            # Debug log to inspect text content
+            with open("debug_salary_parse_text.txt", "w") as f:
+                f.write(f"--- TEXT EXTRACTED FROM {file_path.name} ---\n")
+                f.write(text)
+                f.write("\n------------------------------------------------\n")
             
             if len(text.strip()) < 50:
                  return ParseResult(

@@ -80,12 +80,20 @@ def get_parser_for_file(file_path: Path) -> Optional[BaseParser]:
     
     for parser in parsers:
         try:
+            with open("debug_router.txt", "a") as f:
+                f.write(f"Checking parser {parser.__class__.__name__} for {file_path.name}...\n")
+            
             is_match, confidence = parser.detect(file_path)
-            print(f"DEBUG: Parser {parser.__class__.__name__} -> match={is_match}, conf={confidence}")
+            
+            with open("debug_router.txt", "a") as f:
+                f.write(f"Parser {parser.__class__.__name__} -> match={is_match}, conf={confidence}\n")
+            
             if is_match and confidence > best_confidence:
                 best_confidence = confidence
                 best_parser = parser
-        except Exception:
+        except Exception as e:
+            with open("debug_router.txt", "a") as f:
+                f.write(f"Parser {parser.__class__.__name__} failed: {e}\n")
             continue
             
     return best_parser

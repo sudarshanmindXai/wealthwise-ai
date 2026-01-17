@@ -1,0 +1,8 @@
+Checking 82479ca5_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking ef64e83a_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking 5ffce9d9_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking a6d54a4c_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']

@@ -551,33 +551,53 @@ function IngestContent() {
                     if (statusData.status === "complete") {
                         isComplete = true;
 
-                        // Transform extracted fields to key-value pairs
-                        const extractedMap: Record<string, any> = {};
-                        if (statusData.result?.fields) {
-                            statusData.result.fields.forEach((field: any) => {
-                                extractedMap[field.name] = field.value;
-                            });
-                        }
+                        const resultSuccess = statusData.result?.success !== false; // Default to true if missing, but should be there
+                        const errorMsg = statusData.result?.errors && statusData.result.errors.length > 0
+                            ? statusData.result.errors[0]
+                            : "Parsing failed";
 
-                        setCategoryFiles((prev) => ({
-                            ...prev,
-                            [categoryId]: prev[categoryId].map((f) =>
-                                f.id === uploadedFile.id
-                                    ? {
-                                        ...f,
-                                        status: "success",
-                                        progress: 100,
-                                        detectedType: statusData.document_type,
-                                        extractedData: extractedMap,
-                                        confidence: 1.0, // Should come from overall confidence if available
-                                        warnings: statusData.result?.warnings || [],
-                                        error: statusData.result?.errors && statusData.result.errors.length > 0
-                                            ? statusData.result.errors[0]
-                                            : undefined,
-                                    }
-                                    : f
-                            ),
-                        }));
+                        if (!resultSuccess) {
+                            setCategoryFiles((prev) => ({
+                                ...prev,
+                                [categoryId]: prev[categoryId].map((f) =>
+                                    f.id === uploadedFile.id
+                                        ? {
+                                            ...f,
+                                            status: "error",
+                                            progress: 100,
+                                            error: errorMsg,
+                                            detectedType: statusData.document_type,
+                                        }
+                                        : f
+                                ),
+                            }));
+                        } else {
+                            // Transform extracted fields to key-value pairs
+                            const extractedMap: Record<string, any> = {};
+                            if (statusData.result?.fields) {
+                                statusData.result.fields.forEach((field: any) => {
+                                    extractedMap[field.name] = field.value;
+                                });
+                            }
+
+                            setCategoryFiles((prev) => ({
+                                ...prev,
+                                [categoryId]: prev[categoryId].map((f) =>
+                                    f.id === uploadedFile.id
+                                        ? {
+                                            ...f,
+                                            status: "success",
+                                            progress: 100,
+                                            detectedType: statusData.document_type,
+                                            extractedData: extractedMap,
+                                            confidence: 1.0,
+                                            warnings: statusData.result?.warnings || [],
+                                            error: undefined,
+                                        }
+                                        : f
+                                ),
+                            }));
+                        }
                     } else if (statusData.status === "error" || statusData.status === "failed") {
                         throw new Error(statusData.error || "Processing failed");
                     }

@@ -15,6 +15,7 @@ import {
     FileText,
     Shield,
     Zap,
+    Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,7 @@ const NAV_ITEMS = [
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { fetchAnalysis, fetchReviewSummary } from "@/lib/api";
+import { fetchAnalysis, fetchReviewSummary, downloadForm12BB } from "@/lib/api";
 
 function DashboardContent() {
     const searchParams = useSearchParams();
@@ -37,6 +38,7 @@ function DashboardContent() {
     const [rentPaid, setRentPaid] = useState(20000);
     const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Types
     interface Insight {
@@ -346,8 +348,69 @@ function DashboardContent() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Action Buttons */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                        <h2 className="text-lg font-semibold text-white mb-4">Generate Reports</h2>
+                        <div className="flex flex-wrap gap-4">
+                            <Button
+                                size="lg"
+                                className="bg-white text-slate-950 hover:bg-slate-200"
+                                onClick={async () => {
+                                    setIsDownloading(true);
+                                    const form12BBData = {
+                                        "user": {
+                                            "name": "Tax Payer",
+                                            "address": "Address not provided",
+                                            "pan": "XXXXX0000X",
+                                            "father_name": "Not Provided",
+                                            "designation": "Employee",
+                                            "financial_year": "2025-26"
+                                        },
+                                        "hra": { "rent_paid": rentPaid * 12, "landlord_name": "", "landlord_pan": "", "address": "" },
+                                        "lta": 0,
+                                        "home_loan_interest": { "amount": 0, "lender_name": "", "lender_pan": "" },
+                                        "deductions_80c": [{ "description": "Total 80C", "amount": 150000 }],
+                                        "deductions_points": { "80D": 25000, "80G": 0 }
+                                    };
+                                    await downloadForm12BB(form12BBData);
+                                    setIsDownloading(false);
+                                }}
+                                disabled={isDownloading}
+                            >
+                                {isDownloading ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="animate-spin h-4 w-4 border-2 border-slate-900 border-t-transparent rounded-full" />
+                                        Generating...
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-2">
+                                        <FileText className="w-4 h-4" /> Generate Form 12BB
+                                    </span>
+                                )}
+                            </Button>
+
+                            <Button
+                                size="lg"
+                                variant="secondary"
+                                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                onClick={() => alert("Downloading detailed Tax Analysis Report...")}
+                            >
+                                <Download className="w-4 h-4 mr-2" /> Download Report
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </main>
+
+            {/* Chat Panel */}
+            <ChatPanel userContext={{
+                gross_income: GROSS_INCOME,
+                tax_old: tax_old,
+                tax_new: tax_new,
+                recommended: isNewBetter ? "New Regime" : "Old Regime",
+                potential_savings: totalPotentialSavings
+            }} />
         </div>
     );
 }
