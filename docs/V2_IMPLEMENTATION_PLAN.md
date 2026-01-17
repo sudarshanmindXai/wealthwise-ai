@@ -93,6 +93,7 @@ TaxProfile:
 ✅ Missing info detection  
 ✅ Conversational chat with context memory  
 ✅ PDF report generation (clean, no raw JSON)  
+✅ Form 12BB generation | Backend | ✅ Done
 ✅ Audit logging for all requests  
 ✅ Safety guardrails (domain + language)  
 ✅ Professional Streamlit UI  

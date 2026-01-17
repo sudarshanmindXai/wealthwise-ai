@@ -23,27 +23,49 @@ async def get_transactions_for_review():
     all_tasks = get_all_tasks()
     review_items = []
     
+    print(f"DEBUG /review/transactions: Found {len(all_tasks)} total tasks")
+    
     for task in all_tasks:
+        print(f"DEBUG Task: id={task.get('task_id')}, status={task.get('status')}, doc_type={task.get('document_type')}")
+        
         # Check if task is complete and is a bank statement
         if task.get("status") == "complete" and task.get("document_type") == "bank_statement":
             result = task.get("result", {})
-            transactions = result.get("raw_data", {}).get("transactions", [])
+            print(f"DEBUG Result keys: {result.keys() if result else 'None'}")
+            
+            # Handle both direct and nested raw_data structures
+            raw_data = result.get("raw_data", result)
+            transactions = raw_data.get("transactions", [])
+            
+            print(f"DEBUG Found {len(transactions)} transactions in task {task.get('task_id')}")
             
             for idx, txn in enumerate(transactions):
-                # Create a unique ID for the frontend key
-                txn_id = f"{task['task_id']}_{idx}"
-                
-                review_items.append(ReviewTransaction(
-                    id=txn_id,
-                    date=txn.get("date"),
-                    description=txn.get("description"),
-                    amount=txn.get("amount"),
-                    type=txn.get("type"),
-                    category=txn.get("category", "unsure"),
-                    confidence=txn.get("confidence", 0.0),
-                    source_file=task.get("filename")
-                ))
+                try:
+                    # Create a unique ID for the frontend key
+                    txn_id = f"{task['task_id']}_{idx}"
+                    
+                    # Ensure amount is a float
+                    raw_amt = txn.get("amount", 0.0)
+                    try:
+                        amt = float(raw_amt)
+                    except ValueError:
+                        amt = 0.0
+
+                    review_items.append(ReviewTransaction(
+                        id=txn_id,
+                        date=str(txn.get("date", "")), # Ensure string
+                        description=str(txn.get("description", "Unknown")),
+                        amount=amt,
+                        type=str(txn.get("type", "debit")),
+                        category=str(txn.get("category", "unsure")),
+                        confidence=float(txn.get("confidence", 0.0)),
+                        source_file=str(task.get("filename", "unknown"))
+                    ))
+                except Exception as e:
+                    print(f"Skipping malformed transaction in task {task.get('task_id')}: {e}")
+                    continue
     
+    print(f"DEBUG Returning {len(review_items)} review items")
     return review_items
 
 # Simple in-memory store for classified transactions

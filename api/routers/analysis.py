@@ -7,6 +7,7 @@ from ..guardians.salary import SalarySentinel
 from ..guardians.portfolio import PortfolioArchitect
 from ..guardians.hustle import HustleShield
 from ..guardians.windfall import WindfallWarden
+from ..engine.reasoning import ReasoningEngine
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -40,6 +41,15 @@ async def run_analysis(request: AnalysisRequest):
         investments_80ccd=request.income_details.get("80ccd", 0),
         hra_received=request.income_details.get("hra", 0),
         rent_paid=request.income_details.get("rent_paid", 0),
+
+        
+        # Advanced Mappings
+        income_rent_received=request.income_details.get("rent_received", 0),
+        has_crypto_losses=request.income_details.get("has_crypto_losses", False),
+        is_ev_owner=request.income_details.get("is_ev_owner", False),
+        turnover_business=request.income_details.get("business_turnover", request.income_details.get("business", 0)),
+        dividend_income=request.income_details.get("dividend_income", 0),
+        
         documents=request.documents_summary or []
     )
     
@@ -61,10 +71,14 @@ async def run_analysis(request: AnalysisRequest):
             print(f"Error in {guardian.NAME}: {e}")
             continue
             
+    # Enrich with Reasoning Layer
+    reasoning_engine = ReasoningEngine()
+    enriched_insights = reasoning_engine.enrich_insights(all_insights)
+
     # Calculate totals
-    total_savings = sum(i.impact_currency for i in all_insights if i.impact_currency > 0)
+    total_savings = sum(i.impact_currency for i in enriched_insights if i.impact_currency > 0)
     
     return AnalysisResponse(
-        insights=all_insights,
+        insights=enriched_insights,
         total_potential_savings=total_savings
     )

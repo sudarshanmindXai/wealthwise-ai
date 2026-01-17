@@ -149,8 +149,14 @@ function ReviewContent() {
                         aiSuggestion: t.category,
                         aiConfidence: Math.round(t.confidence * 100)
                     }));
-                    setTransactions(mapped);
-                    setClusters(clusterTransactions(mapped));
+                    if (mapped.length === 0) {
+                        setViewMode("complete");
+                        setTransactions([]);
+                        setClusters([]);
+                    } else {
+                        setTransactions(mapped);
+                        setClusters(clusterTransactions(mapped));
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch transactions", err);
@@ -335,8 +341,16 @@ function ReviewContent() {
                                     You're a Speed Demon!
                                 </h2>
                                 <p className="text-slate-400">
-                                    You just classified <span className="text-white font-bold">{transactions.length} transactions</span> in just a few clicks.
-                                    <br />That's the power of Cluster Review.
+                                    You just classified <span className="text-white font-bold">{transactions.length} transactions</span>.
+                                    {transactions.length > 0 ? (
+                                        <>
+                                            <br />That's the power of Cluster Review.
+                                        </>
+                                    ) : (
+                                        <>
+                                            <br />No new transactions found to review.
+                                        </>
+                                    )}
                                 </p>
                             </div>
 

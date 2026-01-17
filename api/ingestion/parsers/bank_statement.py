@@ -90,7 +90,7 @@ class BankStatementParser(BaseParser):
     Phase B: PDF support with table extraction
     """
     
-    SUPPORTED_EXTENSIONS = [".csv", ".xlsx", ".xls"]
+    SUPPORTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".pdf"]
     DOCUMENT_TYPE = DocumentType.BANK_STATEMENT
     MAX_FILE_SIZE_MB = 10
     
@@ -136,7 +136,19 @@ class BankStatementParser(BaseParser):
             import pandas as pd
             
             # Read first 30 rows to check for headers anywhere
-            if ext == ".csv":
+            # Read first 30 rows/lines to check for headers
+            if ext == ".pdf":
+                 import pdfplumber
+                 try:
+                     with pdfplumber.open(file_path) as pdf:
+                         page = pdf.pages[0]
+                         text = page.extract_text()
+                         # Check for keywords
+                         if "date" in text.lower() and ("debit" in text.lower() or "credit" in text.lower() or "withdrawal" in text.lower()):
+                             return True, 0.85
+                 except Exception:
+                     return False, 0.0
+            elif ext == ".csv":
                 df = pd.read_csv(file_path, nrows=30, header=None)
             else:
                 df = pd.read_excel(file_path, nrows=30, header=None)
@@ -239,6 +251,106 @@ class BankStatementParser(BaseParser):
         # Default to ambiguous
         return "ambiguous", 0.4
     
+    def _parse_pdf(self, file_path: Path) -> tuple[list[Transaction], dict]:
+        """Parse PDF bank statement using table extraction"""
+        import pdfplumber
+        import pandas as pd
+        
+        all_txns = []
+        metadata = {"total_rows": 0, "pages": 0}
+        
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                metadata["pages"] = len(pdf.pages)
+                
+                for page in pdf.pages:
+                    # Extract tables
+                    tables = page.extract_tables()
+                    
+                    for table in tables:
+                        if not table:
+                            continue
+                            
+                        # Convert to DataFrame
+                        df = pd.DataFrame(table[1:], columns=table[0])
+                        
+                        # Clean column names (remove newlines, extra spaces)
+                        df.columns = [str(c).replace("\n", " ").strip() for c in df.columns]
+                        
+                        # Find columns
+                        date_col = self._find_column(df, "date")
+                        desc_col = self._find_column(df, "description")
+                        amount_col = self._find_column(df, "amount")
+                        credit_col = self._find_column(df, "credit")
+                        debit_col = self._find_column(df, "debit")
+                        balance_col = self._find_column(df, "balance")
+                        # Type column might be missing, infer from credit/debit or amount sign
+                        type_col = self._find_column(df, "type") 
+
+                        # If we can't find critical columns, skip this table
+                        if not (date_col and (amount_col or (credit_col and debit_col))):
+                            continue
+                            
+                        # Process rows
+                        for _, row in df.iterrows():
+                            try:
+                                # Get attributes
+                                date = self._parse_date(row.get(date_col))
+                                if not date: continue
+                                
+                                desc = str(row.get(desc_col, "")).replace("\n", " ").strip()
+                                
+                                amount = 0.0
+                                txn_type = "debit" # Default
+                                
+                                if credit_col and debit_col:
+                                    cr = self._parse_amount(row.get(credit_col))
+                                    dr = self._parse_amount(row.get(debit_col))
+                                    if cr and cr > 0:
+                                        amount = cr
+                                        txn_type = "credit"
+                                    elif dr and dr > 0:
+                                        amount = dr
+                                        txn_type = "debit"
+                                elif amount_col:
+                                    amt = self._parse_amount(row.get(amount_col))
+                                    if amt:
+                                        amount = abs(amt)
+                                        # Infer type if explicit column exists
+                                        if type_col:
+                                             t_val = str(row.get(type_col,"")).lower()
+                                             txn_type = "credit" if "cr" in t_val else "debit"
+                                        else:
+                                             # Some statements use negative for debit
+                                             # But mostly separate columns. Assume debit if not specified? 
+                                             # Better heuristics needed for single column without type.
+                                             # For now, default to debit if ambiguous, or assume credit if amount_col matches "Deposit" logic previously
+                                             pass
+                                
+                                if amount > 0:
+                                    balance = self._parse_amount(row.get(balance_col)) if balance_col else 0.0
+                                    cat, conf = self._categorize_transaction(desc, amount)
+                                    
+                                    txn = Transaction(
+                                        date=date,
+                                        description=desc,
+                                        amount=amount,
+                                        type=txn_type,
+                                        balance=balance,
+                                        category=cat,
+                                        confidence=conf
+                                    )
+                                    all_txns.append(txn)
+                            except Exception:
+                                continue # Skip bad rows
+
+        except Exception as e:
+            print(f"PDF parsing error: {e}")
+            raise e
+            
+        metadata["total_rows"] = len(all_txns)
+        return all_txns, metadata
+
     def _parse_csv_xlsx(self, file_path: Path) -> tuple[list[Transaction], dict]:
         """Parse CSV/XLSX file"""
         import pandas as pd
@@ -364,7 +476,10 @@ class BankStatementParser(BaseParser):
             )
         
         try:
-            transactions, metadata = self._parse_csv_xlsx(file_path)
+            if file_path.suffix.lower() == ".pdf":
+                transactions, metadata = self._parse_pdf(file_path)
+            else:
+                transactions, metadata = self._parse_csv_xlsx(file_path)
             
             if not transactions:
                 return ParseResult(
@@ -477,18 +592,26 @@ class BankStatementParser(BaseParser):
             import pandas as pd
             
             ext = file_path.suffix.lower()
-            if ext == ".csv":
-                df = pd.read_csv(file_path)
+            if ext == ".pdf":
+                 yield ParseProgress(
+                    status=ParseStatus.EXTRACTING,
+                    progress=30,
+                    current_step="Extracting tables from PDF...",
+                )
+                 transactions, metadata = self._parse_pdf(file_path)
             else:
-                df = pd.read_excel(file_path)
-            
-            yield ParseProgress(
-                status=ParseStatus.EXTRACTING,
-                progress=40,
-                current_step=f"Found {len(df)} rows...",
-            )
-            
-            transactions, metadata = self._parse_csv_xlsx(file_path)
+                if ext == ".csv":
+                    df = pd.read_csv(file_path)
+                else:
+                    df = pd.read_excel(file_path)
+                
+                yield ParseProgress(
+                    status=ParseStatus.EXTRACTING,
+                    progress=40,
+                    current_step=f"Found {len(df)} rows...",
+                )
+                
+                transactions, metadata = self._parse_csv_xlsx(file_path)
             
             yield ParseProgress(
                 status=ParseStatus.EXTRACTING,

@@ -22,6 +22,7 @@ class DocumentType(str, Enum):
     CAS_STATEMENT = "cas_statement"
     BROKER_PL = "broker_pl"
     RENT_RECEIPT = "rent_receipt"
+    OTHER = "other"
     UNKNOWN = "unknown"
 
 # ... (Parsing classes) ...

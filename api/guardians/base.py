@@ -12,6 +12,8 @@ class Insight(BaseModel):
     confidence: float # 0.0 to 1.0
     category: str # "deduction", "exemption", "compliance", "warning"
     action_item: Optional[str] = None
+    legal_reference: Optional[str] = None # e.g. "Section 80C(2)"
+    legal_text: Optional[str] = None # e.g. "Deduction in respect of life insurance premia..."
 
 class UserContext(BaseModel):
     """
@@ -29,6 +31,14 @@ class UserContext(BaseModel):
     investments_80ccd: float = 0.0
     hra_received: float = 0.0
     rent_paid: float = 0.0
+    
+    # Advanced fields
+    income_rent_received: float = 0.0
+    has_crypto_losses: bool = False
+    is_ev_owner: bool = False
+    turnover_business: float = 0.0 # Gross Receipts
+    dividend_income: float = 0.0
+    
     documents: List[Dict[str, Any]] = []
 
 class BaseGuardian(ABC):

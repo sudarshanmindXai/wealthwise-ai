@@ -107,7 +107,10 @@ gantt
 |------|-------|--------|
 | Run `TEST_SCENARIOS.md` against full build | QA | ✅ Done (13/13) |
 | Verify "Jan Rescue" Narrative | PM | ⏳ Pending |
-| Form 12BB generation | Backend | ⏳ Pending |
+| Form 12BB generation | Backend | ✅ Done |
+| Form 12BB frontend (Report Page) | Frontend | ✅ Done |
+| Reasoning Layer Integration | Backend | ✅ Done |
+| Advanced Guardian Logic (Crypto/EV/GST) | Backend | ✅ Done |
 | Set up "Session Wipe" cron job | DevOps | ⏳ Pending |
 | Bug fixes & Performance tuning | All | ⏳ Pending |
 

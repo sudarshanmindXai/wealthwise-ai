@@ -43,4 +43,21 @@ class SalarySentinel(BaseGuardian):
                  action_item="Ask your employer to restructure your salary to include NPS contribution (up to 10% of Basic)."
              ))
 
+        # 3. EV Lease vs Loan
+        # Since 80EEB is for loans sanctioned till 2023, new EV owners benefit more from Corporate Lease (Perquisite savings)
+        # If user has high salary and doesn't own EV yet (or is considering), this is a proactive tip.
+        # Or if they flagged is_ev_owner = True but not claiming lease
+        
+        # Proactive tip for high earners
+        if context.income_salary > 2000000:
+            insights.append(Insight(
+                title="EV Corporate Lease Arbitrage",
+                description="Buying an EV? A corporate car lease structure is tax-efficient. You pay from pre-tax salary, and the perquisite value for an EV is minimal compared to fuel cars.",
+                impact_currency=150000, # Estimated savings on a mid-range car per year
+                confidence=0.70,
+                category="deduction",
+                action_item="Ask your employer about 'Car Lease Policy' before buying your next vehicle.",
+                legal_reference="Rule 3(2) of Income Tax Rules"
+            ))
+
         return insights

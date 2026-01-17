@@ -12,6 +12,7 @@ from .salary_slip import SalarySlipParser
 from .elss_receipt import ELSSReceiptParser
 from .zerodha_pnl import ZerodhaPnLParser
 from .cas_statement import CASStatementParser
+from .generic import GenericParser
 
 __all__ = [
     "BaseParser",
@@ -25,4 +26,5 @@ __all__ = [
     "ELSSReceiptParser",
     "ZerodhaPnLParser",
     "CASStatementParser",
+    "GenericParser",
 ]

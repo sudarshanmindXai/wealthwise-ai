@@ -39,9 +39,13 @@ app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
 app.include_router(ingestion_router, prefix="/api/v1", tags=["ingestion"])
 
 # Late import to avoid circular dep issues if any
-from .routers import analysis, review
+from .routers import analysis, review, report
 app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
 app.include_router(review.router, prefix="/api/v1", tags=["review"])
+app.include_router(report.router, prefix="/api/v1", tags=["report"])
+
+from .routers import output
+app.include_router(output.router, prefix="/api/v1")
 
 if __name__ == "__main__":
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)

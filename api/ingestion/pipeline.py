@@ -65,7 +65,12 @@ class ExtractionPipeline:
                 current_step="Attempting fast text extraction...",
             )
             
-            text, page_count = self.text_extractor.extract(file_path)
+            try:
+                text, page_count = self.text_extractor.extract(file_path)
+            except Exception as e:
+                print(f"Warning: PDF text extraction failed: {e}")
+                text = ""
+                page_count = 0
             
             # If text is too short, it might be a scanned PDF
             if len(text.strip()) < 50:
@@ -178,9 +183,17 @@ class ExtractionPipeline:
             
             return result
 
-        return ParseResult(
-            success=False,
-            document_type=self.parser.DOCUMENT_TYPE,
-            file_hash="",
-            errors=[f"Unsupported extension: {ext}"],
+        # Fallback for other file types (images, txt, etc.) handled by GenericParser
+        yield ParseProgress(
+            status=ParseStatus.EXTRACTING,
+            progress=20,
+            current_step=f"Processing {ext} file...",
         )
+        result = self.parser.parse(file_path)
+        yield ParseProgress(
+            status=ParseStatus.COMPLETE,
+            progress=100,
+            current_step="Processing complete",
+            partial_results=result.to_dict(),
+        )
+        return result

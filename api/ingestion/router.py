@@ -33,7 +33,9 @@ from .parsers import (
     SalarySlipParser,
     ELSSReceiptParser,
     ZerodhaPnLParser,
+
     CASStatementParser,
+    GenericParser,
 )
 from .parsers.base import DocumentType, detect_document_type
 
@@ -68,7 +70,9 @@ def get_parser_for_file(file_path: Path) -> Optional[BaseParser]:
         SalarySlipParser(),
         ELSSReceiptParser(),
         ZerodhaPnLParser(),
+
         CASStatementParser(),
+        GenericParser(),
     ]
     
     best_parser = None
@@ -77,6 +81,7 @@ def get_parser_for_file(file_path: Path) -> Optional[BaseParser]:
     for parser in parsers:
         try:
             is_match, confidence = parser.detect(file_path)
+            print(f"DEBUG: Parser {parser.__class__.__name__} -> match={is_match}, conf={confidence}")
             if is_match and confidence > best_confidence:
                 best_confidence = confidence
                 best_parser = parser
@@ -194,7 +199,7 @@ async def upload_file(
     # Validate extension
     filename = file.filename or "unknown"
     ext = Path(filename).suffix.lower()
-    allowed_extensions = [".pdf", ".csv", ".xlsx", ".xls"]
+    allowed_extensions = [".pdf", ".csv", ".xlsx", ".xls", ".txt", ".jpg", ".png", ".jpeg"]
     
     if ext not in allowed_extensions:
         raise HTTPException(

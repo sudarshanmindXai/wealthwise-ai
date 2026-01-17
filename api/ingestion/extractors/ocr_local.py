@@ -37,7 +37,13 @@ class OCRLocalExtractor:
         text = ""
         try:
             # Convert PDF to images
-            images = convert_from_path(file_path)
+            try:
+                images = convert_from_path(file_path)
+            except Exception as e:
+                # pdf2image specific errors (e.g. poppler missing)
+                logging.warning(f"pdf2image failed (Poppler might be missing): {e}")
+                raise ImportError(f"PDF conversion failed: {e}")
+            
             total_pages = len(images)
         except Exception as e:
             logging.error(f"OCR preparation failed: {str(e)}")

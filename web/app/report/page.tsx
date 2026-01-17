@@ -6,8 +6,71 @@ import { Download, Share2, Award, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { downloadForm12BB, fetchReportData } from "@/lib/api";
+
+interface ReportData {
+    user_name?: string;
+    user_pan?: string;
+    employer_name?: string;
+    designation?: string;
+    financial_year: string;
+    gross_salary: number;
+    basic_salary: number;
+    hra_received: number;
+    tds_deducted: number;
+    rent_paid: number;
+    landlord_name?: string;
+    landlord_pan?: string;
+    rental_address?: string;
+    lta: number;
+    home_loan_interest: number;
+    home_loan_lender?: string;
+    deductions_80c: { description: string; amount: number }[];
+    total_80c: number;
+    deduction_80d: number;
+    deduction_80g: number;
+    ltcg: number;
+    stcg: number;
+    business_income: number;
+}
+
+// Default sample data for fallback
+const DEFAULT_SAMPLE_DATA = {
+    "user": {
+        "name": "Rohan Patel",
+        "address": "Flat 402, Oakwood Residency, Indiranagar, Bangalore - 560038",
+        "pan": "ABCDE1234F",
+        "father_name": "Suresh Patel",
+        "designation": "Senior Software Engineer",
+        "financial_year": "2025-26"
+    },
+    "hra": {
+        "rent_paid": 180000,
+        "landlord_name": "Amit Kumar",
+        "landlord_pan": "FGHIJ5678K",
+        "address": "Flat 402, Oakwood Residency, Indiranagar, Bangalore"
+    },
+    "lta": 45000,
+    "home_loan_interest": {
+        "amount": 200000,
+        "lender_name": "HDFC Bank",
+        "lender_pan": "HDFC000123"
+    },
+    "deductions_80c": [
+        { "description": "EPF", "amount": 100000 },
+        { "description": "PPF", "amount": 50000 }
+    ],
+    "deductions_points": {
+        "80D": 25000,
+        "80G": 10000
+    }
+};
+
 export default function ReportPage() {
     const [score, setScore] = useState(0);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [reportData, setReportData] = useState<ReportData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         // Animate score
@@ -19,6 +82,79 @@ export default function ReportPage() {
         }, 20);
         return () => clearInterval(interval);
     }, []);
+
+    // Fetch report data from API
+    useEffect(() => {
+        const loadReportData = async () => {
+            setIsLoading(true);
+            const data = await fetchReportData();
+            if (data) {
+                setReportData(data);
+            }
+            setIsLoading(false);
+        };
+        loadReportData();
+    }, []);
+
+    const handleDownload = async () => {
+        setIsDownloading(true);
+
+        // Build Form 12BB data from reportData or fallback to sample
+        let form12BBData;
+
+        if (reportData && reportData.gross_salary > 0) {
+            // Use real data from API
+            form12BBData = {
+                "user": {
+                    "name": reportData.user_name || "Tax Payer",
+                    "address": reportData.rental_address || "Address not provided",
+                    "pan": reportData.user_pan || "XXXXX0000X",
+                    "father_name": "Not Provided",
+                    "designation": reportData.designation || "Employee",
+                    "financial_year": reportData.financial_year
+                },
+                "hra": {
+                    "rent_paid": reportData.rent_paid,
+                    "landlord_name": reportData.landlord_name || "",
+                    "landlord_pan": reportData.landlord_pan || "",
+                    "address": reportData.rental_address || ""
+                },
+                "lta": reportData.lta,
+                "home_loan_interest": {
+                    "amount": reportData.home_loan_interest,
+                    "lender_name": reportData.home_loan_lender || "",
+                    "lender_pan": ""
+                },
+                "deductions_80c": reportData.deductions_80c.length > 0
+                    ? reportData.deductions_80c
+                    : [{ "description": "Total 80C", "amount": reportData.total_80c }],
+                "deductions_points": {
+                    "80D": reportData.deduction_80d,
+                    "80G": reportData.deduction_80g
+                }
+            };
+        } else {
+            // Fallback to sample data
+            form12BBData = DEFAULT_SAMPLE_DATA;
+        }
+
+        const success = await downloadForm12BB(form12BBData);
+        if (success) {
+            console.log("Download successful");
+        } else {
+            alert("Failed to download Form 12BB");
+        }
+        setIsDownloading(false);
+    };
+
+    // Display values
+    const displayTaxOld = reportData?.gross_salary
+        ? Math.round((reportData.gross_salary - 250000) * 0.3)
+        : 420000;
+    const displayTaxNew = reportData?.gross_salary
+        ? Math.round((reportData.gross_salary - 300000) * 0.2)
+        : 300000;
+    const displaySavings = displayTaxOld - displayTaxNew;
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 font-sans flex items-center justify-center">
@@ -43,7 +179,7 @@ export default function ReportPage() {
                             <div className="space-y-2">
                                 <div className="flex justify-between text-xs text-slate-400">
                                     <span>Old Regime</span>
-                                    <span>₹ 4.2L</span>
+                                    <span>₹ {(displayTaxOld / 100000).toFixed(1)}L</span>
                                 </div>
                                 <div className="h-4 bg-slate-800 rounded-full overflow-hidden flex">
                                     <div className="h-full bg-red-500/80 w-[70%]" title="Tax"></div>
@@ -53,7 +189,7 @@ export default function ReportPage() {
                             <div className="space-y-2">
                                 <div className="flex justify-between text-xs text-slate-400">
                                     <span>New Regime (Optimized)</span>
-                                    <span className="text-emerald-400">₹ 3.0L</span>
+                                    <span className="text-emerald-400">₹ {(displayTaxNew / 100000).toFixed(1)}L</span>
                                 </div>
                                 <div className="h-4 bg-slate-800 rounded-full overflow-hidden flex">
                                     <div className="h-full bg-emerald-500/80 w-[50%]" title="Tax"></div>
@@ -61,7 +197,7 @@ export default function ReportPage() {
                                 </div>
                             </div>
                             <div className="pt-2 text-xs text-slate-500">
-                                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span> You save ₹ 1.2L annually
+                                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span> You save ₹ {(displaySavings / 100000).toFixed(1)}L annually
                             </div>
                         </CardContent>
                     </Card>
@@ -90,8 +226,22 @@ export default function ReportPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-                    <Button size="lg" className="bg-white text-slate-950 hover:bg-slate-200">
-                        <Download className="mr-2 w-4 h-4" /> Download Full Report
+                    <Button
+                        size="lg"
+                        className="bg-white text-slate-950 hover:bg-slate-200"
+                        onClick={handleDownload}
+                        disabled={isDownloading}
+                    >
+                        {isDownloading ? (
+                            <span className="flex items-center gap-2">
+                                <span className="animate-spin h-4 w-4 border-2 border-slate-900 border-t-transparent rounded-full" />
+                                Generating...
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-2">
+                                <Download className="w-4 h-4" /> Download Form 12BB
+                            </span>
+                        )}
                     </Button>
                     <Button size="lg" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
                         <Share2 className="mr-2 w-4 h-4" /> Share with Advisor

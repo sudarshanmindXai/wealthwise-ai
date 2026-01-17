@@ -27,7 +27,8 @@ class HustleShield(BaseGuardian):
                     impact_currency=tax_savings_potential,
                     confidence=0.95,
                     category="deduction",
-                    action_item="Ensure you file under Section 44ADA to slash taxable business income by half without maintaining detailed expense books."
+                    action_item="Ensure you file under Section 44ADA to slash taxable business income by half without maintaining detailed expense books.",
+                    legal_reference="Section 44ADA"
                 ))
             else:
                  insights.append(Insight(
@@ -36,7 +37,23 @@ class HustleShield(BaseGuardian):
                     impact_currency=0,
                     confidence=1.0,
                     category="compliance",
-                    action_item="Consult a CA immediately for Audit requirements."
+                    action_item="Consult a CA immediately for Audit requirements.",
+                    legal_reference="Section 44AB"
                 ))
+        
+        # 2. GST Monitoring
+        # If turnover > 20L (Services) or 40L (Goods), GST is mandatory
+        # We use income_business as proxy for turnover for services
+        gst_threshold = 2000000
+        if context.turnover_business > gst_threshold or context.income_business > gst_threshold:
+             insights.append(Insight(
+                title="Mandatory GST Registration",
+                description="Your gross receipts exceed ₹20 Lakhs. You are mandated to register for GST and charge 18% on your invoices.",
+                impact_currency=0, # Compliance cost primarily
+                confidence=1.0,
+                category="compliance",
+                action_item="Register for GST immediately to avoid penalties.",
+                legal_reference="GST Act"
+            ))
 
         return insights

@@ -42,10 +42,29 @@ class PortfolioArchitect(BaseGuardian):
                 action_item="Review your portfolio for stocks/MFs held >1 year with gains. Sell and rebuy to 'harvest' tax-free gains."
             ))
 
-        # 2. Crypto Analysis (Placeholder - assumes documents might contain crypto info in future)
-        # For now, we don't have direct crypto input in context, but adding logic as if we extracted it
-        # If we had a flag check:
-        # if context.has_crypto_losses:
-        #    insights.append(...)
+        # 2. Crypto Analysis (Section 115BBH)
+        if context.has_crypto_losses:
+             insights.append(Insight(
+                title="Crypto Loss Trap (Sec 115BBH)",
+                description="Losses from Virtual Digital Assets (Crypto/NFTs) CANNOT be set off against any other income, including Crypto gains from another token.",
+                impact_currency=0, # It's a dead loss
+                confidence=1.0,
+                category="warning",
+                action_item="Do not bank on offsetting these losses to reduce your tax liability.",
+                legal_reference="Section 115BBH(2)(b)"
+            ))
+
+        # 3. Dividend & Buyback Impact (Budget 2024 update)
+        # Buybacks are now taxed as Deemed Dividend
+        if context.dividend_income > 5000:
+            insights.append(Insight(
+                title="Dividend Tax Alert",
+                description=f"Your dividend income of ₹{context.dividend_income:,} is fully taxable at your slice rate. TDS at 10% applies if >₹5,000.",
+                impact_currency=-(context.dividend_income * 0.30), # Assuming 30% slab
+                confidence=1.0,
+                category="info",
+                action_item="Ensure you have paid Advance Tax on this dividend income to avoid 234C interest.",
+                legal_reference="Section 194"
+            ))
         
         return insights

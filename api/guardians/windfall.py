@@ -14,6 +14,22 @@ class WindfallWarden(BaseGuardian):
         # Placeholder logic: scan documents for rent receipts? 
         # Or simple check on Other Income if substantial.
         
-        pass # To be fleshed out as we have better data inputs.
+        # 1. Rental Income Standard Deduction (Section 24)
+        if context.income_rent_received > 0:
+            std_deduction = context.income_rent_received * 0.30
+            insights.append(Insight(
+                title="Rental Income Standard Deduction",
+                description=f"You are eligible for a flat 30% deduction (₹{std_deduction:,}) on your gross rental receipts of ₹{context.income_rent_received:,}, regardless of actual expenses.",
+                impact_currency=std_deduction * 0.30, # Tax saved at 30% slab
+                confidence=1.0,
+                category="deduction",
+                action_item="Ensure this 30% deduction is applied in your ITR House Property schedule.",
+                legal_reference="Section 24(a)"
+            ))
+
+        # 2. Gift Taxation (Basic Heuristic)
+        # If 'gifts' are found in documents (not yet in context but logic ready)
+        # Assuming we might add 'income_other_gifts' later. For now, skipping.
+        pass
 
         return insights
