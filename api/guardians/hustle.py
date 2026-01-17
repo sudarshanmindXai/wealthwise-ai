@@ -8,7 +8,7 @@ class HustleShield(BaseGuardian):
 
         # 1. Section 44ADA Optimization for Professionals
         # If there is business/freelance income
-        if context.income_business > 0:
+        if context.income_business > 1000:
             # Presumptive checks
             limit_44ada = 7500000 # 75 Lakhs
             

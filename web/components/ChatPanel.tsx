@@ -161,10 +161,10 @@ I can help with:
             {/* Chat Toggle Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-primary-600 rounded-full shadow-lg flex items-center justify-center hover:bg-primary-700 transition-all z-50"
+                className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 hover:bg-emerald-700 rounded-full shadow-lg shadow-emerald-900/50 flex items-center justify-center transition-all z-50"
             >
                 {isOpen ? (
-                    <span className="text-2xl">✕</span>
+                    <span className="text-2xl text-white">✕</span>
                 ) : (
                     <span className="text-2xl">💬</span>
                 )}
@@ -172,9 +172,9 @@ I can help with:
 
             {/* Chat Panel */}
             {isOpen && (
-                <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-surface-card rounded-2xl shadow-2xl border border-white/10 flex flex-col z-40 overflow-hidden">
+                <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 flex flex-col z-40 overflow-hidden">
                     {/* Header */}
-                    <div className="p-4 border-b border-white/10 bg-surface-elevated">
+                    <div className="p-4 border-b border-slate-700 bg-slate-800">
                         <div className="flex items-center gap-3">
                             <span className="text-2xl">🤖</span>
                             <div>
@@ -193,8 +193,8 @@ I can help with:
                             >
                                 <div
                                     className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                        ? 'bg-primary-600 text-white'
-                                        : 'bg-surface-elevated text-white/90'
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-slate-800 text-white/90'
                                         }`}
                                 >
                                     <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
@@ -203,7 +203,7 @@ I can help with:
                         ))}
                         {isLoading && (
                             <div className="flex justify-start">
-                                <div className="bg-surface-elevated rounded-2xl px-4 py-3">
+                                <div className="bg-slate-800 rounded-2xl px-4 py-3">
                                     <span className="animate-pulse">Thinking...</span>
                                 </div>
                             </div>
@@ -227,7 +227,7 @@ I can help with:
                     )}
 
                     {/* Input */}
-                    <div className="p-4 border-t border-white/10">
+                    <div className="p-4 border-t border-slate-700 bg-slate-900">
                         <div className="flex gap-2">
                             <input
                                 type="text"
@@ -235,12 +235,12 @@ I can help with:
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyPress={handleKeyPress}
                                 placeholder="Ask about your taxes..."
-                                className="flex-1 bg-surface-elevated rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                                className="flex-1 bg-slate-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500 border border-slate-700"
                             />
                             <button
                                 onClick={sendMessage}
                                 disabled={isLoading || !input.trim()}
-                                className="px-4 py-3 bg-primary-600 rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-all"
+                                className="px-4 py-3 bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-all text-white"
                             >
                                 →
                             </button>

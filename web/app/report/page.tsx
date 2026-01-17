@@ -2,11 +2,20 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Download, Share2, Award, ArrowLeft } from "lucide-react";
+import { Download, Share2, Award, ArrowLeft, AlertTriangle, ShieldAlert, FileText } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import ChatPanel from "@/components/ChatPanel";
 
 import { downloadForm12BB, fetchReportData } from "@/lib/api";
+
+interface RiskAlert {
+    title: string;
+    description: string;
+    level: "high" | "medium" | "low";
+    category: string;
+    section_ref?: string;
+}
 
 interface ReportData {
     user_name?: string;
@@ -32,6 +41,7 @@ interface ReportData {
     ltcg: number;
     stcg: number;
     business_income: number;
+    risk_alerts: RiskAlert[];
 }
 
 // Default sample data for fallback
@@ -96,6 +106,11 @@ export default function ReportPage() {
         loadReportData();
     }, []);
 
+    const handleDownloadReport = async () => {
+        // Placeholder for Download Report logic
+        alert("Downloading detailed Tax Analysis Report...");
+    };
+
     const handleDownload = async () => {
         setIsDownloading(true);
 
@@ -156,6 +171,10 @@ export default function ReportPage() {
         : 300000;
     const displaySavings = displayTaxOld - displayTaxNew;
 
+    // Risk Analysis Display
+    const riskAlerts = reportData?.risk_alerts || [];
+    const hasHighRisk = riskAlerts.some(a => a.level === "high");
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 font-sans flex items-center justify-center">
             <div className="max-w-3xl w-full space-y-8">
@@ -167,6 +186,38 @@ export default function ReportPage() {
                     <h1 className="text-4xl font-bold text-white tracking-tight">Audit Complete</h1>
                     <p className="text-xl text-slate-400">We've constructed your financial fortress.</p>
                 </div>
+
+                {/* Risk Radar - Only show if risks detected */}
+                {riskAlerts.length > 0 && (
+                    <Card className={`border-l-4 ${hasHighRisk ? 'border-l-red-500 border-red-500/20 bg-red-500/5' : 'border-l-orange-500 border-orange-500/20 bg-orange-500/5'}`}>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <ShieldAlert className={`w-6 h-6 ${hasHighRisk ? 'text-red-500' : 'text-orange-500'}`} />
+                                <CardTitle className="text-white">Tax Risk Radar</CardTitle>
+                            </div>
+                            <CardDescription>
+                                We detected {riskAlerts.length} potential scrutiny triggers in your profile.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {riskAlerts.map((alert, idx) => (
+                                <div key={idx} className="bg-slate-900/50 p-4 rounded-lg border border-white/5">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <h4 className={`font-bold ${alert.level === 'high' ? 'text-red-400' : 'text-orange-400'}`}>
+                                            {alert.title}
+                                        </h4>
+                                        {alert.section_ref && (
+                                            <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">
+                                                {alert.section_ref}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-slate-300">{alert.description}</p>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="grid md:grid-cols-2 gap-6">
                     {/* Tax Stack Visualization */}
@@ -235,14 +286,24 @@ export default function ReportPage() {
                         {isDownloading ? (
                             <span className="flex items-center gap-2">
                                 <span className="animate-spin h-4 w-4 border-2 border-slate-900 border-t-transparent rounded-full" />
-                                Generating...
+                                Generating 12BB...
                             </span>
                         ) : (
                             <span className="flex items-center gap-2">
-                                <Download className="w-4 h-4" /> Download Form 12BB
+                                <FileText className="w-4 h-4" /> Generate Form 12BB
                             </span>
                         )}
                     </Button>
+
+                    <Button
+                        size="lg"
+                        variant="secondary"
+                        className="bg-emerald-600 text-white hover:bg-emerald-700"
+                        onClick={handleDownloadReport}
+                    >
+                        <Download className="w-4 h-4 mr-2" /> Download Report
+                    </Button>
+
                     <Button size="lg" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
                         <Share2 className="mr-2 w-4 h-4" /> Share with Advisor
                     </Button>
@@ -254,6 +315,15 @@ export default function ReportPage() {
                     </Link>
                 </div>
             </div>
+
+            {/* Chat Panel */}
+            <ChatPanel userContext={{
+                gross_income: reportData?.gross_salary || 0,
+                tax_old: displayTaxOld,
+                tax_new: displayTaxNew,
+                recommended: displayTaxNew < displayTaxOld ? "New Regime" : "Old Regime",
+                potential_savings: displaySavings
+            }} />
         </div>
     );
 }

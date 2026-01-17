@@ -128,6 +128,9 @@ function ReviewContent() {
     const [viewMode, setViewMode] = useState<"cluster" | "individual" | "complete">("cluster");
     const [showClassifications, setShowClassifications] = useState(false);
 
+    // Context Selection State
+    const [userContext, setUserContext] = useState<{ isFreelancer: boolean; hasReceivedGifts: boolean } | null>(null);
+
     // Fetch transactions
     useEffect(() => {
         if (isDemo) {
@@ -150,9 +153,10 @@ function ReviewContent() {
                         aiConfidence: Math.round(t.confidence * 100)
                     }));
                     if (mapped.length === 0) {
-                        setViewMode("complete");
+                        // Don't auto-complete, let empty state render
                         setTransactions([]);
                         setClusters([]);
+                        setIsLoading(false);
                     } else {
                         setTransactions(mapped);
                         setClusters(clusterTransactions(mapped));
@@ -177,8 +181,6 @@ function ReviewContent() {
         if (transactions.length > 0 && classifications.length === transactions.length) {
             setViewMode("complete");
         } else if (isClusterComplete && transactions.length > 0) {
-            // If clusters are done but individual items remain (though clustering covers all, theoretically)
-            // In this logic, clustering covers everything.
             setViewMode("complete");
         }
     }, [isClusterComplete, transactions.length, classifications.length]);
@@ -222,6 +224,69 @@ function ReviewContent() {
     // Helper to format currency
     const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");
 
+    // Context Selector Component
+    if (!userContext && viewMode !== "complete" && transactions.length > 0) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex flex-col">
+                <TunnelHeader title="Review Setup" step={3} totalSteps={5} backHref="/ingest" isDemo={isDemo} />
+                <main className="flex-1 container py-8 px-4 flex items-center justify-center">
+                    <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+                        <div className="text-center">
+                            <h2 className="text-xl font-bold text-white mb-2">Help us categorize faster</h2>
+                            <p className="text-slate-400 text-sm">Select all that apply to you this financial year.</p>
+                        </div>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => setUserContext(prev => ({ isFreelancer: !(prev?.isFreelancer), hasReceivedGifts: prev?.hasReceivedGifts || false }))} // Toggle logic handled in actual implementation below easier
+                                className="hidden"
+                            />
+                            {/* Temporary simple implementation needed for replacing the block */}
+                        </div>
+
+                        <div className="grid gap-3">
+                            <Button
+                                variant="outline"
+                                className="h-auto py-4 justify-start space-x-3 border-slate-700 hover:bg-slate-800 text-left"
+                                onClick={() => setUserContext({ isFreelancer: false, hasReceivedGifts: false })}
+                            >
+                                <User className="w-5 h-5 text-emerald-500" />
+                                <div>
+                                    <div className="font-semibold text-white">Salaried Individual</div>
+                                    <div className="text-xs text-slate-400">I only have salary and personal expenses</div>
+                                </div>
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                className="h-auto py-4 justify-start space-x-3 border-slate-700 hover:bg-slate-800 text-left"
+                                onClick={() => setUserContext({ isFreelancer: true, hasReceivedGifts: false })}
+                            >
+                                <Wrench className="w-5 h-5 text-orange-500" />
+                                <div>
+                                    <div className="font-semibold text-white">Freelancer / Business</div>
+                                    <div className="text-xs text-slate-400">I have business income/expenses</div>
+                                </div>
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                className="h-auto py-4 justify-start space-x-3 border-slate-700 hover:bg-slate-800 text-left"
+                                onClick={() => setUserContext({ isFreelancer: true, hasReceivedGifts: true })}
+                            >
+                                <Gift className="w-5 h-5 text-red-500" />
+                                <div>
+                                    <div className="font-semibold text-white">Freelancer + Gifts</div>
+                                    <div className="text-xs text-slate-400">I have business income and received gifts</div>
+                                </div>
+                            </Button>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col">
             {isDemo && <DemoBanner />}
@@ -244,11 +309,19 @@ function ReviewContent() {
 
                     {/* Progress Bar for Clusters */}
                     {viewMode === "cluster" && clusters.length > 0 && (
-                        <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
-                            <div
-                                className="h-full bg-emerald-500 transition-all duration-300"
-                                style={{ width: `${(currentClusterIndex / clusters.length) * 100}%` }}
-                            />
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs text-slate-400 font-medium">
+                                <span>Batch {currentClusterIndex + 1} of {clusters.length}</span>
+                                <span>{Math.round((currentClusterIndex / clusters.length) * 100)}% Complete</span>
+                            </div>
+                            <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                                <div
+                                    className="h-full bg-emerald-500 transition-all duration-300 relative"
+                                    style={{ width: `${((currentClusterIndex + 1) / clusters.length) * 100}%` }}
+                                >
+                                    <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -290,6 +363,10 @@ function ReviewContent() {
                             {/* Review Actions */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {(["business", "personal", "gift", "unsure"] as const).map((category) => {
+                                    // Logic to hide categories based on userContext
+                                    if (category === "business" && !userContext?.isFreelancer) return null;
+                                    if (category === "gift" && !userContext?.hasReceivedGifts) return null;
+
                                     const config = CATEGORY_CONFIG[category];
                                     const Icon = config.icon;
                                     const isAiPick = category === currentCluster.commonCategory;
@@ -338,19 +415,11 @@ function ReviewContent() {
                             <div className="text-6xl">🎉</div>
                             <div>
                                 <h2 className="text-2xl font-bold text-white mb-2">
-                                    You're a Speed Demon!
+                                    Review Complete!
                                 </h2>
                                 <p className="text-slate-400">
-                                    You just classified <span className="text-white font-bold">{transactions.length} transactions</span>.
-                                    {transactions.length > 0 ? (
-                                        <>
-                                            <br />That's the power of Cluster Review.
-                                        </>
-                                    ) : (
-                                        <>
-                                            <br />No new transactions found to review.
-                                        </>
-                                    )}
+                                    You have classified <span className="text-white font-bold">{transactions.length} transactions</span>.
+                                    <br />Your audit report is ready.
                                 </p>
                             </div>
 
@@ -383,6 +452,27 @@ function ReviewContent() {
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Button>
 
+                        </div>
+                    ) : transactions.length === 0 && !isLoading ? (
+                        /* Empty State (No Transactions Found) */
+                        <div className="text-center py-20 space-y-6">
+                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-800/50 mb-4">
+                                <HelpCircle className="w-10 h-10 text-slate-500" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-white mb-2">No Transactions Found</h2>
+                                <p className="text-slate-400 max-w-sm mx-auto">
+                                    We couldn't find any transactions to review. This usually means no bank statement was uploaded or the session expired.
+                                </p>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <Button variant="outline" onClick={() => window.location.href = "/ingest"}>
+                                    <Undo2 className="mr-2 h-4 w-4" /> Go Back to Upload
+                                </Button>
+                                <Button onClick={() => window.location.href = "/review?demo=true"}>
+                                    Try Demo Mode
+                                </Button>
+                            </div>
                         </div>
                     ) : (
                         <div className="text-center py-20">

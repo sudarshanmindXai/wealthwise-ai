@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from api.ingestion.store import get_all_tasks
+from api.analysis.risk_engine import analyze_risks, RiskAlert
 
 router = APIRouter(prefix="/report", tags=["report"])
 
@@ -54,6 +55,9 @@ class ReportData(BaseModel):
     # Business Income (from bank statement classification)
     business_income: float = 0
     personal_income: float = 0
+    
+    # Risk Analysis
+    risk_alerts: List[RiskAlert] = []
 
 
 @router.get("/data", response_model=ReportData)
@@ -76,8 +80,6 @@ async def get_report_data():
         fields = {}
         for field in result.get("fields", []):
             fields[field.get("name")] = field.get("value")
-        
-        print(f"DEBUG Report: Processing task {task.get('task_id')}, doc_type={doc_type}, fields={list(fields.keys())}")
         
         # Extract based on document type
         if doc_type == "form_16":
@@ -119,6 +121,9 @@ async def get_report_data():
     
     # Apply limits
     report.total_80c = min(report.total_80c, 150000)  # 80C limit
+    
+    # Run Risk Analysis
+    report.risk_alerts = analyze_risks(report.dict())
     
     return report
 
