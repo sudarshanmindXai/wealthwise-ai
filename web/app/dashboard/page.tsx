@@ -28,6 +28,7 @@ const NAV_ITEMS = [
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { fetchAnalysis, fetchReviewSummary } from "@/lib/api";
 
 function DashboardContent() {
     const searchParams = useSearchParams();
@@ -53,46 +54,66 @@ function DashboardContent() {
     }
 
     // Fetch Analysis (Simulated Context)
+    // State for Real Data
+    const [incomeDetails, setIncomeDetails] = useState({
+        salary: 1500000, // Fallback default
+        business: 0,
+        rent_paid: 20000 * 12,
+        ltcg: 0,
+        stcg: 0
+    });
+
+    // Fetch Analysis (Real Context)
     useEffect(() => {
-        const fetchAnalysis = async () => {
+        const loadDashboardData = async () => {
             setIsLoading(true);
             try {
-                // In a real app, this data would come from the session/backend
-                const res = await fetch("http://localhost:8000/api/v1/analysis/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        user_id: "demo_user",
-                        income_details: {
-                            salary: 1500000,
-                            hra: 300000, // Potential HRA
-                            rent_paid: rentPaid * 12, // Annualized
-                            business: 1000000,
-                            ltcg: 50000
-                        },
-                        regime: "new"
-                    })
-                });
+                // 1. Get financial summary from Review step
+                let summary = { salary: 1500000, business: 0, gift: 0, personal_expense: 0 };
 
-                if (res.ok) {
-                    const data = await res.json();
+                if (!isDemo) {
+                    summary = await fetchReviewSummary();
+                }
+
+                // Update local state for sliders/calculations
+                setIncomeDetails(prev => ({
+                    ...prev,
+                    salary: summary.salary || 1500000,
+                    business: summary.business || 0,
+                }));
+
+                // 2. Run Analysis with this data
+                const analysisReq = {
+                    user_id: isDemo ? "demo_user" : "user_123",
+                    income_details: {
+                        salary: summary.salary || 1500000,
+                        hra: 0, // We don't know HRA received yet, assume 0 or need input
+                        rent_paid: rentPaid * 12,
+                        business: summary.business,
+                        ltcg: 0 // Todo: Fetch from capital gains parser
+                    },
+                    regime: "new"
+                };
+
+                const data = await fetchAnalysis(analysisReq);
+                if (data) {
                     setAnalysisData(data);
                 }
             } catch (err) {
-                console.error("Failed to fetch analysis", err);
+                console.error("Failed to load dashboard", err);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchAnalysis();
-    }, [rentPaid]);
+        loadDashboardData();
+    }, [rentPaid, isDemo]);
 
     // Derived values
     const potentialSavings = analysisData?.total_potential_savings || 82800;
 
     // Tax Calculation Logic (Client-side fallback for sliders)
-    const GROSS_INCOME = 2580000; // ₹25.8L total
+    const GROSS_INCOME = incomeDetails.salary + incomeDetails.business;
     const STANDARD_DEDUCTION_OLD = 50000;
     const STANDARD_DEDUCTION_NEW = 75000;
 

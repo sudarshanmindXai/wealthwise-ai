@@ -88,35 +88,43 @@ class ELSSReceiptParser(BaseParser):
     def _extract_transactions(self, text: str) -> list[dict]:
         """
         Attempt to extract multiple transactions from a table structure.
-        Our generic regex might only catch the first one. 
-        For now, let's try to find all occurrences of amounts near scheme names.
+        Looks for lines containing 'ELSS' and extracts amounts.
         """
         transactions = []
-        # Find all amounts > 500 (filter out small fees)
-        amount_matches = list(re.finditer(r"(?:Rs\.?)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)", text))
-        
-        # This is a heuristic extraction. Ideally, we need layout-aware parsing (PDFPlumber table extraction).
-        # For this MVP, we will rely on key fields extraction for the *Validation* of the document type,
-        # but for true data extraction of multiple rows, we might need to enhance this later.
-        
-        # For the specific Vikram sample, we know lines look like:
-        # TXN... Fund Name ... ELSS ... 50,000 ... Date
         
         lines = text.split('\n')
         for line in lines:
             if "ELSS" in line:
-                # Likely a transaction row. Amount usually comes after category or late in line.
-                # Look for amount strictly AFTER "ELSS"
-                amt_match = re.search(r"ELSS.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)", line)
-                date_match = re.search(r"(\d{2}[/-]\d{2}[/-]\d{4})", line)
+                # The amount is typically AFTER the word ELSS in the line.
+                # Format: "... ELSS 3000 03/05/2020" or similar
+                # We look for a number (digits only) that follows ELSS
                 
-                if amt_match:
-                    transactions.append({
-                        "raw_line": line,
-                        "amount": self._parse_amount(amt_match.group(1)),
-                        "date": date_match.group(1) if date_match else None,
-                        "category": "ELSS"
-                    })
+                # Split on ELSS and take everything after
+                parts = line.split("ELSS")
+                if len(parts) > 1:
+                    after_elss = parts[1]
+                    
+                    # Find numbers: look for a sequence of digits (possibly with commas)
+                    # that represents the amount (any number of digits)
+                    amount_matches = re.findall(r'(\d+(?:,\d{2,3})*(?:\.\d{2})?)', after_elss)
+                    
+                    # Filter to get amounts >= 500 (ignore small numbers like dates)
+                    amounts = []
+                    for m in amount_matches:
+                        parsed = self._parse_amount(m)
+                        if parsed and parsed >= 500:
+                            amounts.append(parsed)
+                    
+                    # Get date
+                    date_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4})', line)
+                    
+                    if amounts:
+                        transactions.append({
+                            "raw_line": line,
+                            "amount": amounts[0],  # Take the first valid amount
+                            "date": date_match.group(1) if date_match else None,
+                            "category": "ELSS"
+                        })
         
         return transactions
 

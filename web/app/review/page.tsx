@@ -14,8 +14,10 @@ import {
     ArrowRight,
     ChevronDown,
     Undo2,
+    Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { saveReview } from "@/lib/api";
 
 interface Transaction {
     id: number;
@@ -351,12 +353,21 @@ function ReviewContent() {
                                 </Badge>
                             </div>
 
-                            <Link href={isDemo ? "/dashboard?demo=true" : "/dashboard"}>
-                                <Button size="lg" className="w-full sm:w-auto px-12 py-6 text-lg bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xl shadow-emerald-900/40 transition-all hover:scale-105 mt-4">
-                                    Generate Audit Report
-                                    <ArrowRight className="ml-2 h-5 w-5" />
-                                </Button>
-                            </Link>
+                            <Button
+                                size="lg"
+                                onClick={async () => {
+                                    if (!isDemo) {
+                                        try {
+                                            await saveReview(classifications);
+                                        } catch (e) { /* error handled in api.ts */ }
+                                    }
+                                    window.location.href = isDemo ? "/dashboard?demo=true" : "/dashboard";
+                                }}
+                                className="w-full sm:w-auto px-12 py-6 text-lg bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xl shadow-emerald-900/40 transition-all hover:scale-105 mt-4"
+                            >
+                                Generate Audit Report
+                                <ArrowRight className="ml-2 h-5 w-5" />
+                            </Button>
 
                         </div>
                     ) : (
