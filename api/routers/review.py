@@ -59,6 +59,12 @@ async def get_transactions_for_review():
                         except ValueError:
                             amt = 0.0
 
+                        # DATA CLEANING: Filter out bad rows
+                        desc = str(txn.get("description", "Unknown")).strip()
+                        if not desc or desc.lower() in ["nan", "null", "none", "unknown"]:
+                            f.write(f"Skipping junk transaction: desc='{desc}', amount={amt}\n")
+                            continue
+
                         review_items.append(ReviewTransaction(
                             id=txn_id,
                             date=str(txn.get("date", "")), # Ensure string

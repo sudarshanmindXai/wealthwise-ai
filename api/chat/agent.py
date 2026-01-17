@@ -4,8 +4,13 @@ WealthWise AI - Chat Agent
 The main CA Companion agent with RAG and tool access.
 """
 
-from typing import Optional, AsyncGenerator
+import os
+import json
+from typing import Optional, AsyncGenerator, Dict, Any, List
 from pathlib import Path
+
+from openai import AsyncOpenAI
+from dotenv import load_dotenv
 
 from .memory import ChatMemory, UserContext, Message
 from .safety import check_message_safety, redact_pii, sanitize_for_llm
@@ -15,6 +20,10 @@ from .tools import (
     search_tax_law,
     TOOL_DEFINITIONS,
 )
+
+# Load env from explicit path
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 # Load system prompt
@@ -55,6 +64,14 @@ class CACompanionAgent:
     ):
         self.memory = ChatMemory(max_turns=10, session_id=session_id)
         
+        # Initialize OpenAI Client
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            print("WARNING: OPENAI_API_KEY not found. Chat will fail.")
+        
+        self.client = AsyncOpenAI(api_key=api_key)
+        self.model = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+
         # Set user context
         if user_context:
             self.memory.set_context(user_context)
@@ -76,13 +93,7 @@ class CACompanionAgent:
     
     async def chat(self, user_message: str) -> str:
         """
-        Process user message and return response.
-        
-        Args:
-            user_message: User's question
-        
-        Returns:
-            Assistant's response (with citations)
+        Process user message and return response using OpenAI with tools.
         """
         # Step 1: Safety check
         safety_result = check_message_safety(user_message)
@@ -94,130 +105,93 @@ class CACompanionAgent:
         # Step 2: Add to memory
         self.memory.add_message("user", user_message)
         
-        # Step 3: Detect if tool call needed
-        tool_result = self._check_for_tool_call(user_message)
-        tool_context = ""
-        if tool_result:
-            tool_context = f"\n\nTOOL RESULT:\n{tool_result}"
+        # Step 3: Generate response with tool loop
+        try:
+            response = await self._generate_response()
+        except Exception as e:
+            print(f"Error generating response: {e}")
+            response = "I apologize, but I encountered an error while processing your request. Please try again."
         
-        # Step 4: Generate response (placeholder - needs LLM integration)
-        response = self._generate_response(user_message, tool_context)
-        
-        # Step 5: Add response to memory
+        # Step 4: Add response to memory
         self.memory.add_message("assistant", response)
         
         return response
     
-    def _check_for_tool_call(self, message: str) -> Optional[str]:
-        """Detect if message requires tool call and execute"""
-        message_lower = message.lower()
+    async def _generate_response(self) -> str:
+        """Generate response using OpenAI with tool calling loop."""
         
-        # Check for "What If" scenarios
-        if any(phrase in message_lower for phrase in ["what if", "if i", "suppose"]):
-            if "rent" in message_lower or "hra" in message_lower:
-                # Try to extract rent value and calculate
-                if self.memory.user_context:
-                    result = calculate_hra_exemption(
-                        basic_salary=self.memory.user_context.salary_summary.get("basic", 0) if self.memory.user_context.salary_summary else 0,
-                        hra_received=self.memory.user_context.salary_summary.get("hra", 0) if self.memory.user_context.salary_summary else 0,
-                        rent_paid_monthly=25000,  # Example value
-                        is_metro=True,
-                    )
-                    return result.message
+        # Prepare messages
+        messages = self._prepare_messages()
+        
+        # Tool mapping
+        available_tools = {
+            "recalculate_tax": recalculate_tax,
+            "calculate_hra_exemption": calculate_hra_exemption,
+            "search_tax_law": search_tax_law,
+        }
+        
+        # First call to LLM
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            tools=[{"type": "function", "function": t} for t in TOOL_DEFINITIONS],
+            tool_choice="auto", 
+        )
+        
+        response_msg = response.choices[0].message
+        
+        # Check for tool calls
+        if response_msg.tool_calls:
+            # Add the assistant's request to valid messages
+            messages.append(response_msg)
             
-            if "nps" in message_lower:
-                if self.memory.user_context:
-                    result = recalculate_tax(
-                        gross_salary=self.memory.user_context.gross_income,
-                        employer_nps=self.memory.user_context.gross_income * 0.14,
-                    )
-                    return result.message
+            # Process map
+            for tool_call in response_msg.tool_calls:
+                func_name = tool_call.function.name
+                func_args = json.loads(tool_call.function.arguments)
+                
+                print(f"Defining tool call: {func_name} with {func_args}")
+                
+                if func_name in available_tools:
+                    tool_function = available_tools[func_name]
+                    # Call the tool
+                    try:
+                        result = tool_function(**func_args)
+                        content = json.dumps(result.data) if result.success else f"Error: {result.message}"
+                    except Exception as e:
+                        content = f"Tool execution failed: {str(e)}"
+                        
+                    # Add tool response
+                    messages.append({
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": func_name,
+                        "content": content,
+                    })
+            
+            # Second call to LLM with tool outputs
+            second_response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+            )
+            return second_response.choices[0].message.content
+            
+        return response_msg.content
+
+    def _prepare_messages(self) -> List[Dict[str, Any]]:
+        """Convert memory to OpenAI message format."""
+        openai_messages = []
         
-        # Check for section lookup
-        if "section" in message_lower or "what does" in message_lower:
-            result = search_tax_law(message)
-            if result.success and result.data.get("results"):
-                return f"Found: {result.data['results'][0].get('text', '')[:300]}..."
+        # System prompt with context is already in memory[0] if set correctly
+        # But let's map strictly
         
-        return None
-    
-    def _generate_response(self, user_message: str, tool_context: str = "") -> str:
-        """
-        Generate response using LLM.
-        
-        Note: This is a placeholder. In production, this would call
-        OpenAI/Anthropic API with the conversation history.
-        """
-        # For demo, provide rule-based responses
-        message_lower = user_message.lower()
-        
-        if "hra" in message_lower:
-            return f"""Your HRA exemption is calculated under **Section 10(13A)**.
-
-The exemption is the **minimum** of:
-1. Actual HRA received from employer
-2. Rent paid - 10% of Basic salary
-3. 50% of Basic (Metro) or 40% (Non-Metro)
-
-{tool_context if tool_context else ''}
-
-**Action:** To maximize HRA, either increase rent or ask HR to restructure more salary into HRA component."""
-
-        if "nps" in message_lower or "80ccd" in message_lower:
-            return f"""NPS contributions have two deductions available:
-
-1. **Section 80CCD(1)**: Your contribution (up to ₹1.5L, within 80C limit)
-2. **Section 80CCD(1B)**: Additional ₹50,000 over 80C limit
-3. **Section 80CCD(2)**: Employer contribution (up to 14% of Basic+DA)
-
-The **employer contribution is allowed in BOTH regimes** - this is the key optimization.
-
-{tool_context if tool_context else ''}
-
-**Action:** Request HR to increase employer NPS contribution to 14% of Basic."""
-
-        if "crypto" in message_lower or "115bbh" in message_lower:
-            return """Crypto/VDA taxation is governed by **Section 115BBH** (introduced in Finance Act 2022).
-
-**Key Rules:**
-- Flat 30% tax on gains (no slab benefit)
-- No set-off of losses against any income
-- Cannot carry forward losses
-- 1% TDS on transfers (Section 194S)
-
-⚠️ **Warning:** Your crypto loss of ₹20,000 is a "dead loss" - it cannot reduce your tax liability.
-
-**Action:** Factor this into future investment decisions. Consider regular equities for tax-efficient gains."""
-
-        if "44ada" in message_lower or "presumptive" in message_lower:
-            return """**Section 44ADA** allows professionals to declare 50% of gross receipts as profit.
-
-**Eligibility:**
-- Specified professionals (legal, medical, engineering, etc.)
-- Gross receipts ≤ ₹75L (if cash < 5%) or ≤ ₹50L otherwise
-
-**Benefits:**
-- No need to maintain books of account
-- No audit required (if profit ≥ 50%)
-- Simpler ITR-4 filing
-
-**Your Status:** You qualify for 44ADA with taxable income of ₹3,00,000 (50% of ₹6,00,000).
-
-**Action:** File ITR-4 for presumptive income."""
-
-        # Default response
-        return f"""Thank you for your question about: *"{user_message}"*
-
-Based on your financial profile, I can help you understand the tax implications.
-
-{tool_context if tool_context else 'Let me search the relevant sections...'}
-
-Could you please clarify which specific aspect you'd like me to explain? For example:
-- The calculation logic
-- Optimization opportunities
-- Required documentation
-
-*Note: I cite relevant sections of the Income Tax Act to ensure accuracy.*"""
+        for msg in self.memory.messages:
+            openai_messages.append({
+                "role": msg.role,
+                "content": msg.content
+            })
+            
+        return openai_messages
     
     def get_session_summary(self) -> dict:
         """Get summary of the chat session"""

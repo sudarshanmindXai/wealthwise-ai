@@ -394,9 +394,40 @@ function DashboardContent() {
                                 size="lg"
                                 variant="secondary"
                                 className="bg-emerald-600 text-white hover:bg-emerald-700"
-                                onClick={() => alert("Downloading detailed Tax Analysis Report...")}
+                                onClick={async () => {
+                                    setIsDownloading(true);
+                                    try {
+                                        const reportReq = {
+                                            "user": {
+                                                "name": isDemo ? "Demo User" : "Valued Client",
+                                                "pan": "ABCDE1234F"
+                                            },
+                                            "analysis": {
+                                                "gross_income": GROSS_INCOME,
+                                                "taxable_income": isNewBetter ? taxable_new : taxable_old,
+                                                "tax_old": tax_old,
+                                                "tax_new": tax_new,
+                                                "regime": isNewBetter ? "new" : "old",
+                                                "savings": regimeSavings,
+                                                "tax_payable": isNewBetter ? tax_new : tax_old
+                                            },
+                                            "insights": analysisData?.insights || []
+                                        };
+                                        await import("@/lib/api").then(mod => mod.downloadReport(reportReq));
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                    setIsDownloading(false);
+                                }}
+                                disabled={isDownloading}
                             >
-                                <Download className="w-4 h-4 mr-2" /> Download Report
+                                {isDownloading ? (
+                                    <span className="flex items-center gap-2">Generating...</span>
+                                ) : (
+                                    <span className="flex items-center gap-2">
+                                        <Download className="w-4 h-4" /> Download Report
+                                    </span>
+                                )}
                             </Button>
                         </div>
                     </div>

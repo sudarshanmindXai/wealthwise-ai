@@ -644,8 +644,8 @@ function IngestContent() {
 
     // Filter categories based on active guardians
     const visibleCategories = CATEGORIES.filter((category) => {
-        // Always show 'other' category
-        if (category.id === "other") return true;
+        // Always show 'other' and 'bank' category
+        if (category.id === "other" || category.id === "bank") return true;
 
         // If no guardians selected yet (direct access), show all required
         if (activeGuardians.size === 0 && !isDemo) return true;

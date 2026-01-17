@@ -129,7 +129,11 @@ function ReviewContent() {
     const [showClassifications, setShowClassifications] = useState(false);
 
     // Context Selection State
-    const [userContext, setUserContext] = useState<{ isFreelancer: boolean; hasReceivedGifts: boolean } | null>(null);
+    // Default to everything enabled to bypass the "Review Setup" screen and jump straight to sorting
+    const [userContext, setUserContext] = useState<{ isFreelancer: boolean; hasReceivedGifts: boolean } | null>({
+        isFreelancer: true,
+        hasReceivedGifts: true
+    });
 
     // Fetch transactions
     useEffect(() => {
@@ -500,25 +504,35 @@ interface Cluster {
 
 function clusterTransactions(transactions: Transaction[]): Cluster[] {
     const groups: Record<string, Transaction[]> = {};
+    const GAMBLING_KEYWORDS = ["DREAM11", "RUMMY", "CASINO", "BET", "LOTTERY", "POKER", "GAMES24X7", "1XBET"];
 
     // 1. Group by description (normalized)
     transactions.forEach(t => {
-        // Normalize: "UBER INDIA RIDE" -> "UBER", "SWIGGY 1234" -> "SWIGGY"
-        // Simple heuristic: First 2 words, uppercase, remove numbers
+        const descUpper = t.description.toUpperCase();
+
+        // Filter: Only High Value (> 1 Lakh) OR Gambling related
+        const isHighValue = t.amount > 100000;
+        const isGambling = GAMBLING_KEYWORDS.some(kw => descUpper.includes(kw));
+
+        if (!isHighValue && !isGambling) {
+            return; // Skip small, non-risky transactions
+        }
+
+        // Normalize: "UBER INDIA RIDE" -> "UBER" (First word only for broader groups)
         const cleanDesc = t.description
             .replace(/[0-9]/g, '')
             .replace(/[-_]/g, ' ')
             .trim()
             .toUpperCase()
             .split(' ')
-            .slice(0, 2) // Take first 2 words
+            .slice(0, 1) // Take first 1 word only
             .join(' ');
 
         if (!groups[cleanDesc]) groups[cleanDesc] = [];
         groups[cleanDesc].push(t);
     });
 
-    // 2. Convert to Array and Sort by Count (High impact first)
+    // 2. Convert to Array and Sort by Total Amount (Highest Impact First)
     return Object.entries(groups)
         .map(([name, txs], idx) => {
             // Calculate common category (mode)
@@ -542,7 +556,7 @@ function clusterTransactions(transactions: Transaction[]): Cluster[] {
                 confidence: avgConf
             };
         })
-        .sort((a, b) => b.count - a.count); // Sort by biggest clusters first
+        .sort((a, b) => b.totalAmount - a.totalAmount); // Sort by highest spend first
 }
 
 function generateDemoTransactions(): Transaction[] {

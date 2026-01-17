@@ -31,6 +31,7 @@ class SalarySlipParser(BaseParser):
         "net_pay": [
             r"Net\s+Pay[:\s]+(?:Rs\.?)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
             r"Net\s+Salary[:\s]+.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
+            r"Net\s+Amount(?:.*\(cid:\d+\))?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",
         ],
         "basic_salary": [
             r"Basic\s+Salary.*?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)",

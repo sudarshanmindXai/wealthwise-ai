@@ -55,3 +55,28 @@ async def generate_form12bb(request: Form12BBRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class ReportRequest(BaseModel):
+    user: Dict
+    analysis: Dict
+    insights: List[Dict] = []
+
+@router.post("/report/pdf")
+async def generate_report_pdf(request: ReportRequest):
+    """
+    Generate Detailed Report PDF.
+    """
+    try:
+        from ..output.report_pdf import ReportPDFGenerator
+        
+        data = request.dict()
+        generator = ReportPDFGenerator(data)
+        pdf_bytes = generator.generate()
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=WealthWise_Report.pdf"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

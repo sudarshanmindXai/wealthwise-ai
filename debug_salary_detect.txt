@@ -6,3 +6,43 @@ Checking 5ffce9d9_Siddhant_salaryslips.pdf: matches=4, text_len=1269
 Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
 Checking a6d54a4c_Siddhant_form 16.pdf: matches=1, text_len=11402
 Keywords found: ['deductions']
+Checking a6165cc4_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking 680681bc_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking 515a0712_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking 99d65cbd_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking 2bb7306b_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
+Checking eb4bc838_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking 369bd077_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking 6c1d46e1_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
+Checking 7b99a08b_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking 5baea76d_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking 2fa22046_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
+Checking ea73b86c_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking f4357c24_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking ef5c0bbe_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
+Checking e1d393e5_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking a7d13aed_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking f39ca62b_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
+Checking 8530fff7_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking b11cf062_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking 9c62c7a7_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
