@@ -1,4 +1,4 @@
-DEBUG /review/transactions: Found 15 total tasks
+DEBUG /review/transactions: Found 20 total tasks
 DEBUG Task: id=ea73b86c, status=complete, doc_type=form_16
 DEBUG Task Detail: id=ea73b86c, filename=Siddhant_form 16.pdf, error=None
 DEBUG Task: id=f4357c24, status=complete, doc_type=salary_slip
@@ -38,3 +38,16 @@ DEBUG Task: id=eb1ad407, status=complete, doc_type=zerodha_pnl
 DEBUG Task Detail: id=eb1ad407, filename=zerodha_taxpnl.xlsx, error=None
 DEBUG Task: id=9c62c7a7, status=complete, doc_type=elss_receipt
 DEBUG Task Detail: id=9c62c7a7, filename=ELSS_Payment_Receipt.pdf, error=None
+DEBUG Task: id=ea981a98, status=complete, doc_type=salary_slip
+DEBUG Task Detail: id=ea981a98, filename=Siddhant_salaryslips.pdf, error=None
+DEBUG Task: id=2b6039b0, status=complete, doc_type=form_16
+DEBUG Task Detail: id=2b6039b0, filename=Siddhant_form 16.pdf, error=None
+DEBUG Task: id=55b53a16, status=complete, doc_type=bank_statement
+DEBUG Task Detail: id=55b53a16, filename=HDFC 20-21.xls, error=None
+DEBUG Result success: True
+DEBUG Found 371 transactions in task 55b53a16
+Skipping junk transaction: desc='nan', amount=1771627.04
+DEBUG Task: id=cdb996f8, status=complete, doc_type=zerodha_pnl
+DEBUG Task Detail: id=cdb996f8, filename=zerodha_taxpnl.xlsx, error=None
+DEBUG Task: id=678ebf5d, status=complete, doc_type=elss_receipt
+DEBUG Task Detail: id=678ebf5d, filename=ELSS_Payment_Receipt.pdf, error=None

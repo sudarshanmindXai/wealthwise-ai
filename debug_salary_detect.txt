@@ -46,3 +46,9 @@ Checking b11cf062_Siddhant_form 16.pdf: matches=1, text_len=11402
 Keywords found: ['deductions']
 Checking 9c62c7a7_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
 Keywords found: []
+Checking ea981a98_Siddhant_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking 2b6039b0_Siddhant_form 16.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking 678ebf5d_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
