@@ -662,6 +662,14 @@ class BankStatementParser(BaseParser):
             
             processing_time = int((time.time() - start_time) * 1000)
             
+            # Scrub PII from raw transactions (same as parse())
+            from ..utils.pii_mask import PIIScrubber
+            scrubbed_txns = []
+            for t in transactions:
+                t_dict = t.to_dict()
+                t_dict["description"] = PIIScrubber.scrub_text(t_dict["description"])
+                scrubbed_txns.append(t_dict)
+            
             result = ParseResult(
                 success=True,
                 document_type=self.DOCUMENT_TYPE,
@@ -669,7 +677,7 @@ class BankStatementParser(BaseParser):
                 fields=fields,
                 raw_data={
                     **metadata,
-                    "transactions": [t.to_dict() for t in transactions],
+                    "transactions": scrubbed_txns,
                 },
                 warnings=[
                     f"{len(ambiguous_credits)} transactions need manual classification"
