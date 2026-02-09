@@ -137,10 +137,27 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
 
 async def process_file_async(task_id: str, file_path: Path, filename: str):
     """Background task to process a file using the pipeline"""
+    # Import audit logging
+    from ..audit import log_event, AuditEventType
+    
     try:
+        # Log upload event
+        log_event(
+            AuditEventType.DOCUMENT_UPLOADED,
+            task_id=task_id,
+            filename=filename,
+            details={"file_size": file_path.stat().st_size}
+        )
+        
         # Update status - detecting
         _tasks[task_id]["status"] = "detecting"
         _tasks[task_id]["progress"] = 10
+        
+        log_event(
+            AuditEventType.DOCUMENT_DETECTING,
+            task_id=task_id,
+            filename=filename,
+        )
         
         # Get parser
         parser = get_parser_for_file(file_path)
@@ -149,12 +166,34 @@ async def process_file_async(task_id: str, file_path: Path, filename: str):
             _tasks[task_id]["status"] = "error"
             _tasks[task_id]["error"] = "Could not detect document type."
             _tasks[task_id]["progress"] = 100
+            
+            log_event(
+                AuditEventType.DOCUMENT_ERROR,
+                task_id=task_id,
+                filename=filename,
+                details={"error": "Could not detect document type"}
+            )
             return
         
         _tasks[task_id]["document_type"] = parser.DOCUMENT_TYPE.value
         
+        log_event(
+            AuditEventType.DOCUMENT_DETECTED,
+            task_id=task_id,
+            filename=filename,
+            document_type=parser.DOCUMENT_TYPE.value,
+            details={"parser": parser.__class__.__name__}
+        )
+        
         # Initialize pipeline
         pipeline = ExtractionPipeline(parser)
+        
+        log_event(
+            AuditEventType.DOCUMENT_PARSING,
+            task_id=task_id,
+            filename=filename,
+            document_type=parser.DOCUMENT_TYPE.value,
+        )
         
         # Process with streaming
         for progress_update in pipeline.process_streaming(file_path):
@@ -178,6 +217,17 @@ async def process_file_async(task_id: str, file_path: Path, filename: str):
             if current_status == "complete":
                 _tasks[task_id]["result"] = progress_update.partial_results
                 _tasks[task_id]["status"] = "complete"  # Set status LAST
+                
+                log_event(
+                    AuditEventType.DOCUMENT_PARSED,
+                    task_id=task_id,
+                    filename=filename,
+                    document_type=parser.DOCUMENT_TYPE.value,
+                    details={
+                        "fields_count": len(progress_update.partial_results.get("fields", [])),
+                        "success": progress_update.partial_results.get("success", True),
+                    }
+                )
         
     except Exception as e:
         import traceback
@@ -185,6 +235,13 @@ async def process_file_async(task_id: str, file_path: Path, filename: str):
         _tasks[task_id]["error"] = str(e)
         _tasks[task_id]["traceback"] = traceback.format_exc()
         _tasks[task_id]["progress"] = 100
+        
+        log_event(
+            AuditEventType.DOCUMENT_ERROR,
+            task_id=task_id,
+            filename=filename,
+            details={"error": str(e)}
+        )
 
 
 # Endpoints

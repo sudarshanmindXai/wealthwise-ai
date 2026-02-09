@@ -94,3 +94,19 @@ Checking a56042b1_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
 Keywords found: []
 Checking 11ba92a3_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
 Keywords found: []
+Checking c66e25ed_Rohan.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking 90449986_Rohan_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking 00e57c27_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
+Checking bf6345cb_salary_slip_vikram.pdf: matches=5, text_len=884
+Keywords found: ['pay slip', 'earnings', 'deductions', 'net pay', 'basic salary']
+Checking a351d227_form16_vikram.pdf: matches=1, text_len=2156
+Keywords found: ['deductions']
+Checking 4266139e_Rohan_salaryslips.pdf: matches=4, text_len=1269
+Keywords found: ['pay slip', 'earnings', 'deductions', 'basic salary']
+Checking b68e0d0d_Rohan.pdf: matches=1, text_len=11402
+Keywords found: ['deductions']
+Checking fea795fd_ELSS_Payment_Receipt.pdf: matches=0, text_len=885
+Keywords found: []
