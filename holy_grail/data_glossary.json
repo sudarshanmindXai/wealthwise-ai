@@ -1,0 +1,622 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "WealthWise AI Data Glossary",
+    "description": "Data models, schemas, and terminology definitions for the Tax Auditor",
+    "version": "1.0.0",
+    "fiscalYear": "2025-26",
+    "definitions": {
+        "UserProfile": {
+            "description": "Core user account and preferences",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "email": {
+                    "type": "string",
+                    "format": "email"
+                },
+                "pan": {
+                    "$ref": "#/definitions/PAN"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "dob": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "assessmentYear": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}$"
+                },
+                "onboardingComplete": {
+                    "type": "boolean"
+                },
+                "activeGuardians": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/GuardianType"
+                    }
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            },
+            "required": [
+                "id",
+                "email",
+                "pan",
+                "assessmentYear"
+            ]
+        },
+        "PAN": {
+            "description": "Permanent Account Number (10 chars: 5 alpha, 4 numeric, 1 alpha)",
+            "type": "string",
+            "pattern": "^[A-Z]{5}[0-9]{4}[A-Z]$",
+            "example": "ABCDE1234F"
+        },
+        "GuardianType": {
+            "description": "Types of Guardian agents",
+            "type": "string",
+            "enum": [
+                "salary_sentinel",
+                "portfolio_architect",
+                "hustle_shield",
+                "windfall_warden"
+            ]
+        },
+        "IncomeSource": {
+            "description": "Categorized income stream",
+            "type": "string",
+            "enum": [
+                "salary",
+                "freelance",
+                "business",
+                "capital_gains_equity",
+                "capital_gains_property",
+                "crypto_vda",
+                "rental",
+                "dividends",
+                "interest",
+                "gifts",
+                "other"
+            ]
+        },
+        "SalaryIncome": {
+            "description": "Salary breakdown from Form 16",
+            "type": "object",
+            "properties": {
+                "grossSalary": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "basicSalary": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "da": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Dearness Allowance"
+                },
+                "hra": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "House Rent Allowance received"
+                },
+                "specialAllowance": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "otherAllowances": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "perquisites": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "profitsInLieu": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "employerNpsContribution": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "standardDeduction": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "tdsDeducted": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            },
+            "required": [
+                "grossSalary",
+                "basicSalary",
+                "tdsDeducted"
+            ]
+        },
+        "FreelanceIncome": {
+            "description": "Professional/Freelance income for 44ADA",
+            "type": "object",
+            "properties": {
+                "grossReceipts": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "actualExpenses": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "professionType": {
+                    "type": "string",
+                    "enum": [
+                        "legal",
+                        "medical",
+                        "engineering",
+                        "architecture",
+                        "accountancy",
+                        "technical_consultancy",
+                        "interior_decoration",
+                        "film_artist",
+                        "company_secretary",
+                        "authorized_representative",
+                        "other"
+                    ]
+                },
+                "is44adaEligible": {
+                    "type": "boolean"
+                },
+                "presumptiveProfit": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "grossReceipts",
+                "professionType"
+            ]
+        },
+        "CapitalGains": {
+            "description": "Investment gains/losses",
+            "type": "object",
+            "properties": {
+                "assetType": {
+                    "type": "string",
+                    "enum": [
+                        "equity_listed",
+                        "equity_unlisted",
+                        "mutual_fund",
+                        "property",
+                        "gold",
+                        "crypto",
+                        "other"
+                    ]
+                },
+                "holdingPeriod": {
+                    "type": "string",
+                    "enum": [
+                        "short_term",
+                        "long_term"
+                    ]
+                },
+                "saleValue": {
+                    "type": "number"
+                },
+                "purchaseValue": {
+                    "type": "number"
+                },
+                "gainOrLoss": {
+                    "type": "number",
+                    "description": "Positive = gain, Negative = loss"
+                },
+                "taxRate": {
+                    "type": "number",
+                    "description": "Applicable rate"
+                },
+                "exemptionClaimed": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            },
+            "required": [
+                "assetType",
+                "holdingPeriod",
+                "saleValue",
+                "purchaseValue",
+                "gainOrLoss"
+            ]
+        },
+        "RentalIncome": {
+            "description": "Income from house property",
+            "type": "object",
+            "properties": {
+                "grossRent": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "municipalTaxes": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "netAnnualValue": {
+                    "type": "number"
+                },
+                "standardDeduction": {
+                    "type": "number",
+                    "description": "30% of NAV"
+                },
+                "homeLoanInterest": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "taxableRentalIncome": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "grossRent"
+            ]
+        },
+        "Deductions": {
+            "description": "Chapter VI-A deductions (Old Regime)",
+            "type": "object",
+            "properties": {
+                "section80c": {
+                    "type": "number",
+                    "maximum": 150000
+                },
+                "section80ccd1b": {
+                    "type": "number",
+                    "maximum": 50000,
+                    "description": "NPS personal"
+                },
+                "section80ccd2": {
+                    "type": "number",
+                    "description": "NPS employer (no absolute limit)"
+                },
+                "section80d": {
+                    "type": "number",
+                    "description": "Health insurance"
+                },
+                "section80e": {
+                    "type": "number",
+                    "description": "Education loan interest (no limit)"
+                },
+                "section80g": {
+                    "type": "number",
+                    "description": "Donations"
+                },
+                "section80tta": {
+                    "type": "number",
+                    "maximum": 10000,
+                    "description": "Savings interest"
+                },
+                "section24": {
+                    "type": "number",
+                    "description": "Home loan interest (up to 2L)"
+                },
+                "hraExemption": {
+                    "type": "number"
+                },
+                "totalDeductions": {
+                    "type": "number"
+                }
+            }
+        },
+        "TaxRegime": {
+            "type": "string",
+            "enum": [
+                "old",
+                "new"
+            ],
+            "description": "Tax regime selection"
+        },
+        "TaxCalculationResult": {
+            "description": "Output of tax computation",
+            "type": "object",
+            "properties": {
+                "regime": {
+                    "$ref": "#/definitions/TaxRegime"
+                },
+                "grossTotalIncome": {
+                    "type": "number"
+                },
+                "deductions": {
+                    "type": "number"
+                },
+                "taxableIncome": {
+                    "type": "number"
+                },
+                "taxOnIncome": {
+                    "type": "number"
+                },
+                "rebate87a": {
+                    "type": "number"
+                },
+                "taxAfterRebate": {
+                    "type": "number"
+                },
+                "surcharge": {
+                    "type": "number"
+                },
+                "cess": {
+                    "type": "number"
+                },
+                "totalTaxLiability": {
+                    "type": "number"
+                },
+                "tdsAlreadyPaid": {
+                    "type": "number"
+                },
+                "taxPayableOrRefund": {
+                    "type": "number",
+                    "description": "Positive = payable, Negative = refund"
+                }
+            },
+            "required": [
+                "regime",
+                "taxableIncome",
+                "totalTaxLiability"
+            ]
+        },
+        "GuardianFinding": {
+            "description": "Optimization recommendation from a Guardian",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "guardian": {
+                    "$ref": "#/definitions/GuardianType"
+                },
+                "severity": {
+                    "type": "string",
+                    "enum": [
+                        "info",
+                        "warning",
+                        "critical"
+                    ]
+                },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "optimization",
+                        "compliance",
+                        "risk",
+                        "information"
+                    ]
+                },
+                "title": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "potentialSavings": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "actionRequired": {
+                    "type": "boolean"
+                },
+                "actionSteps": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "relatedSection": {
+                    "type": "string",
+                    "description": "Tax section reference"
+                }
+            },
+            "required": [
+                "guardian",
+                "severity",
+                "category",
+                "title",
+                "description"
+            ]
+        },
+        "RegimeComparison": {
+            "description": "Side-by-side regime analysis",
+            "type": "object",
+            "properties": {
+                "oldRegime": {
+                    "$ref": "#/definitions/TaxCalculationResult"
+                },
+                "newRegime": {
+                    "$ref": "#/definitions/TaxCalculationResult"
+                },
+                "optimizedNew": {
+                    "$ref": "#/definitions/TaxCalculationResult"
+                },
+                "recommendedRegime": {
+                    "$ref": "#/definitions/TaxRegime"
+                },
+                "savingsAmount": {
+                    "type": "number"
+                },
+                "explanation": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "oldRegime",
+                "newRegime",
+                "recommendedRegime"
+            ]
+        },
+        "Form12BB": {
+            "description": "Employee declaration for TDS reduction",
+            "type": "object",
+            "properties": {
+                "employeePan": {
+                    "$ref": "#/definitions/PAN"
+                },
+                "employeeName": {
+                    "type": "string"
+                },
+                "financialYear": {
+                    "type": "string"
+                },
+                "hraClaim": {
+                    "type": "object",
+                    "properties": {
+                        "rentPaid": {
+                            "type": "number"
+                        },
+                        "landlordName": {
+                            "type": "string"
+                        },
+                        "landlordPan": {
+                            "$ref": "#/definitions/PAN"
+                        },
+                        "landlordAddress": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "homeLoanInterest": {
+                    "type": "object",
+                    "properties": {
+                        "lenderName": {
+                            "type": "string"
+                        },
+                        "lenderPan": {
+                            "$ref": "#/definitions/PAN"
+                        },
+                        "interestAmount": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "chapter6Deductions": {
+                    "type": "object",
+                    "properties": {
+                        "section80c": {
+                            "type": "number"
+                        },
+                        "section80ccc": {
+                            "type": "number"
+                        },
+                        "section80ccd": {
+                            "type": "number"
+                        },
+                        "section80d": {
+                            "type": "number"
+                        },
+                        "section80e": {
+                            "type": "number"
+                        },
+                        "section80g": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "generatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            },
+            "required": [
+                "employeePan",
+                "employeeName",
+                "financialYear"
+            ]
+        },
+        "DocumentType": {
+            "type": "string",
+            "enum": [
+                "form_16",
+                "bank_statement",
+                "cas_statement",
+                "rent_receipt",
+                "other"
+            ]
+        },
+        "ParsedDocument": {
+            "description": "OCR-extracted document data",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "type": {
+                    "$ref": "#/definitions/DocumentType"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "uploadedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "parsedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "parsing",
+                        "completed",
+                        "failed"
+                    ]
+                },
+                "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "extractedData": {
+                    "type": "object"
+                },
+                "userVerified": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "id",
+                "userId",
+                "type",
+                "status"
+            ]
+        }
+    },
+    "terminology": {
+        "AY": "Assessment Year - Year in which income is assessed (e.g., 2026-27 for FY 2025-26)",
+        "FY": "Financial Year - April 1 to March 31 (e.g., 2025-26)",
+        "TDS": "Tax Deducted at Source - Advance tax collected by employer/bank",
+        "LTCG": "Long Term Capital Gains - Gains on assets held beyond specified period",
+        "STCG": "Short Term Capital Gains - Gains on assets held below specified period",
+        "HRA": "House Rent Allowance - Tax-exempt allowance for rent",
+        "NPS": "National Pension System - Retirement savings scheme",
+        "ELSS": "Equity Linked Savings Scheme - Tax-saving mutual fund",
+        "87A": "Section 87A - Rebate for low-income taxpayers",
+        "44ADA": "Section 44ADA - Presumptive taxation for professionals",
+        "115BBH": "Section 115BBH - Crypto/VDA taxation rules",
+        "VDA": "Virtual Digital Assets - Cryptocurrencies and NFTs",
+        "CAS": "Consolidated Account Statement - Holdings across MF, stocks",
+        "NAV": "Net Annual Value - Gross rent minus municipal taxes",
+        "PGBP": "Profits and Gains from Business or Profession",
+        "IFOS": "Income from Other Sources"
+    }
+}

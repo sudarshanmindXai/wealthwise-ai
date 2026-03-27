@@ -1,0 +1,33 @@
+--- TEXT EXTRACTED FROM 4266139e_Rohan_salaryslips.pdf ---
+User Experience Design Consulting Private Limited
+#806,1st Floor, R C C Building,
+19th Main, HSR Layout Sector-2,
+Bangalore
+CIN: U72200KA2010PTC055262
+Pay Slip
+for May-2021
+Siddhant Jha
+Employee Number : UXDC-062 Tax Regime : Regular Tax Regime
+Function : Income Tax Number (PAN) : GPWPS6672M
+Designation : Product Manager Universal Account Number (UAN) : 101475149048(cid:13)(cid:10)
+Location : Bangalore PF account number : PY/BOM/1973890/000/0010020
+Bank Details : 27771930000671, HDFC Bank (India), 983, St Bed Layout, 80Ft Peripheral Rd, Koramangala, Bengaluru ESI Number :
+Date of joining : 18-Mar-2019 PR Account Number (PRAN) :
+Earnings Amount Deductions Amount
+Basic Salary 59,028.00 Professional Tax Payable 200.00
+House Rent Allowance 23,611.00 TDS on Salaries 13,442.00
+Conveyance Allowance 1,600.00 Employee’s Provident Fund 1,800.00
+Medical Allowance 1,250.00 Gratuity Payable 2,839.00
+Internet Allowance 1,500.00 Employer to PF 1,800.00
+Leave Travel Assistance 9,500.00
+Special Allowance 16,927.00
+Gratuity 2,839.00
+Employer Cont to EP 1,800.00
+Total Earnings 1,18,055.00 Total Deductions 20,081.00
+Net Amount (cid:299) 97,974.00
+Amount (in words):
+Indian Rupees Ninety Seven Thousand Nine Hundred Seventy Four
+Only
+This is a Computer Generated Pay Slip
+
+------------------------------------------------

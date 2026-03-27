@@ -1,0 +1,10 @@
+DEBUG /review/transactions: Found 3 total tasks
+DEBUG Task: id=f268f485, status=complete, doc_type=bank_statement
+DEBUG Task Detail: id=f268f485, filename=HDFC 20-21.xls, error=None
+DEBUG Result success: True
+DEBUG Found 371 transactions in task f268f485
+Skipping junk transaction: desc='nan', amount=1771627.04
+DEBUG Task: id=2a050c93, status=complete, doc_type=zerodha_pnl
+DEBUG Task Detail: id=2a050c93, filename=zerodha_taxpnl.xlsx, error=None
+DEBUG Task: id=fea795fd, status=complete, doc_type=elss_receipt
+DEBUG Task Detail: id=fea795fd, filename=ELSS_Payment_Receipt.pdf, error=None

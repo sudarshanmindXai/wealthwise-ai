@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WealthWise AI - Audit Trail</title>
+    <style>
+        :root {
+            --bg-primary: #0F172A;
+            --bg-secondary: #1E293B;
+            --bg-card: #334155;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --accent-green: #10B981;
+            --accent-blue: #3B82F6;
+            --accent-yellow: #F59E0B;
+            --accent-red: #EF4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--bg-card);
+        }
+        
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+        
+        .header .badge {
+            background: var(--accent-blue);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border: 1px solid var(--bg-card);
+        }
+        
+        .stat-card .label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .controls input, .controls select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--bg-card);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .controls button {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .controls button:hover {
+            opacity: 0.9;
+        }
+        
+        .events-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-secondary);
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        
+        .events-table th {
+            background: var(--bg-card);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .events-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--bg-card);
+            font-size: 0.875rem;
+        }
+        
+        .events-table tr:hover {
+            background: var(--bg-card);
+        }
+        
+        .event-type {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .event-type.uploaded { background: var(--accent-blue); }
+        .event-type.detected { background: var(--accent-green); }
+        .event-type.parsed { background: var(--accent-green); }
+        .event-type.error { background: var(--accent-red); }
+        .event-type.detecting, .event-type.parsing { background: var(--accent-yellow); color: #000; }
+        
+        .doc-type {
+            color: var(--accent-blue);
+        }
+        
+        .task-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state h2 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .refresh-hint {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Audit Trail</h1>
+        <span class="badge">WealthWise AI</span>
+    </div>
+    
+    <div class="stats-grid" id="stats">
+        <div class="stat-card">
+            <div class="label">Total Events</div>
+            <div class="value" id="totalEvents">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Documents Processed</div>
+            <div class="value" id="uniqueTasks">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Bank Statements</div>
+            <div class="value" id="bankStatements">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Form 16s</div>
+            <div class="value" id="form16s">—</div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <input type="text" id="filterTaskId" placeholder="Filter by Task ID...">
+        <select id="filterEventType">
+            <option value="">All Event Types</option>
+            <option value="document_uploaded">Uploaded</option>
+            <option value="document_detected">Detected</option>
+            <option value="document_parsed">Parsed</option>
+            <option value="document_error">Error</option>
+        </select>
+        <button onclick="loadEvents()">🔄 Refresh</button>
+        <span class="refresh-hint">Auto-refreshes every 5s</span>
+    </div>
+    
+    <table class="events-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Event</th>
+                <th>Document</th>
+                <th>Type</th>
+                <th>Task ID</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody id="eventsBody">
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <h2>No audit events yet</h2>
+                    <p>Upload a document in the main app to see audit events here.</p>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <script>
+        const API_BASE = '/api/v1/audit';
+        
+        async function loadSummary() {
+            try {
+                const res = await fetch(`${API_BASE}/summary`);
+                const data = await res.json();
+                
+                document.getElementById('totalEvents').textContent = data.total_events || 0;
+                document.getElementById('uniqueTasks').textContent = data.unique_tasks || 0;
+                document.getElementById('bankStatements').textContent = 
+                    data.by_document_type?.bank_statement || 0;
+                document.getElementById('form16s').textContent = 
+                    data.by_document_type?.form_16 || 0;
+            } catch (e) {
+                console.error('Failed to load summary:', e);
+            }
+        }
+        
+        async function loadEvents() {
+            const taskId = document.getElementById('filterTaskId').value;
+            const eventType = document.getElementById('filterEventType').value;
+            
+            let url = `${API_BASE}/events?limit=50`;
+            if (taskId) url += `&task_id=${taskId}`;
+            if (eventType) url += `&event_type=${eventType}`;
+            
+            try {
+                const res = await fetch(url);
+                const events = await res.json();
+                
+                const tbody = document.getElementById('eventsBody');
+                
+                if (!events.length) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <h2>No audit events yet</h2>
+                                <p>Upload a document in the main app to see audit events here.</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                tbody.innerHTML = events.map(e => `
+                    <tr>
+                        <td>${formatTime(e.timestamp)}</td>
+                        <td><span class="event-type ${getEventClass(e.event_type)}">${formatEventType(e.event_type)}</span></td>
+                        <td>${e.filename}</td>
+                        <td class="doc-type">${e.document_type || '—'}</td>
+                        <td class="task-id">${e.task_id}</td>
+                        <td>${formatDetails(e.details)}</td>
+                    </tr>
+                `).join('');
+                
+            } catch (e) {
+                console.error('Failed to load events:', e);
+            }
+        }
+        
+        function formatTime(iso) {
+            const d = new Date(iso);
+            return d.toLocaleTimeString() + ' ' + d.toLocaleDateString();
+        }
+        
+        function formatEventType(type) {
+            return type.replace('document_', '').replace('_', ' ');
+        }
+        
+        function getEventClass(type) {
+            if (type.includes('error')) return 'error';
+            if (type.includes('uploaded')) return 'uploaded';
+            if (type.includes('detected')) return 'detected';
+            if (type.includes('parsed')) return 'parsed';
+            if (type.includes('detecting')) return 'detecting';
+            if (type.includes('parsing')) return 'parsing';
+            return '';
+        }
+        
+        function formatDetails(details) {
+            if (!details || Object.keys(details).length === 0) return '—';
+            const keys = Object.keys(details).slice(0, 2);
+            return keys.map(k => `${k}: ${details[k]}`).join(', ');
+        }
+        
+        // Initial load
+        loadSummary();
+        loadEvents();
+        
+        // Auto-refresh every 5 seconds
+        setInterval(() => {
+            loadSummary();
+            loadEvents();
+        }, 5000);
+    </script>
+</body>
+</html>
